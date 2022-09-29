@@ -4,9 +4,27 @@ version = "0.1.0"
 edition = "2021"
 
 [lib]
+crate-type = ["cdylib", "lib"]
+path = "src/lib.rs"
+
+[[bin]]
+name = "main"
+path = "src/main.rs"
 
 [dependencies]
-shuttle-service = { version = "0.5.2", features = ["bot-serenity", "sqlx-postgres", "secrets"] }
+reqwest = { version = "0.11.11", features = ["json"] }
+serde = "1.0.144"
+shuttle-service = { version = "0.5.2", features = [
+    "bot-serenity", 
+    "sqlx-postgres", 
+    "secrets"
+    ] }
 log = "0.4.17"
-serenity = { version = "0.11.5", default-features = false, features = ["client", "gateway", "rustls_backend", "model"] }
+serenity = { version = "0.11.5", default-features = false, features = [
+    "client", 
+    "gateway", 
+    "rustls_backend", 
+    "model"
+    ] }
 sqlx = { version = "0.6.2", features = ["runtime-tokio-native-tls", "postgres"] }
+tokio = { version = "1.20.1", features = ["rt", "macros", "rt-multi-thread"] }
