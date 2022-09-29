@@ -1,9 +1,11 @@
 use std::{collections::HashMap, fs::read_to_string};
 
 use discord_fank::get_client;
+use std::env;
 
 #[tokio::main]
 async fn main() {
+    env::set_var("RUST_BACKTRACE", "1");
     let secrets_toml = read_to_string("./Secrets.toml").expect("Could not find 'Secrets.toml'");
     let secrets = secrets_toml
         .lines()
