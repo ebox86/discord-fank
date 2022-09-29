@@ -1,7 +1,6 @@
 mod commands;
 use serenity::model::prelude::command::CommandOptionType;
 
-use serenity::model::event::MessageCreateEvent
 use serenity::model::application::command::Command;
 use log::{error, info};
 use serenity::model::application::interaction::{Interaction, InteractionResponseType};
