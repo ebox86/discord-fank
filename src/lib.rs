@@ -16,10 +16,6 @@ struct Bot {
 	discord_guild_id: GuildId,
 }
 
-struct MessageCreateEvent {
-    message: Message,
-}
-
 #[shuttle_service::main]
 async fn serenity(#[shared::Postgres] pool: PgPool) -> shuttle_service::ShuttleSerenity {
     // Get the discord token set in `Secrets.toml` from the shared Postgres database
