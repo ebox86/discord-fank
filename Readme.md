@@ -5,6 +5,7 @@ This is an open source discord bot for financial and trading servers which offer
 * User (member) defined custom watch lists (coming soon)
 * Integration into many popular financial data providers (coming soon)
 * Voice Chat callouts based on triggers or preconfigured price or change levels (coming soon)
+* Fun (8Ball, Dice roll)
 
 ## Setup
 Discord Fank is built using the serenity rust framework for discord. It is deployed using [Shuttle](https://shuttle.rs) service. To deploy your own version, create a free shuttle account and download the shuttle crate:

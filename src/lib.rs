@@ -1,7 +1,7 @@
 mod commands;
 use serenity::model::prelude::command::CommandOptionType;
 
-use std::env;
+use serenity::model::event::MessageCreateEvent
 use serenity::model::application::command::Command;
 use log::{error, info};
 use serenity::model::application::interaction::{Interaction, InteractionResponseType};
@@ -15,6 +15,10 @@ use sqlx::PgPool;
 struct Bot {
     client: reqwest::Client,
 	discord_guild_id: GuildId,
+}
+
+struct MessageCreateEvent {
+    message: Message,
 }
 
 #[shuttle_service::main]
@@ -43,9 +47,7 @@ pub async fn get_client(
     discord_token: &str,
     discord_guild_id: u64,
 ) -> Client {
-    // Set gateway intents, which decides what events the bot will be notified about.
-    // Here we don't need any intents so empty
-    let intents = GatewayIntents::empty();
+    let intents = GatewayIntents::GUILD_MESSAGES | GatewayIntents::MESSAGE_CONTENT;
 
     Client::builder(discord_token, intents)
         .event_handler(Bot {
@@ -73,12 +75,12 @@ impl EventHandler for Bot {
 
         println!("I now have the following guild slash commands: {:#?}", commands);
 
-        let guild_command = Command::create_global_application_command(&ctx.http, |command| {
+        let global_command = Command::create_global_application_command(&ctx.http, |command| {
             commands::wonderful_command::register(command)
         })
         .await;
 
-        println!("I created the following global slash command: {:#?}", guild_command);
+        println!("I created the following global slash command: {:#?}", global_command);
     }
 
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
