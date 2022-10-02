@@ -1,10 +1,10 @@
 mod commands;
-use serenity::model::prelude::command::CommandOptionType;
 
 use serenity::model::application::command::Command;
 use log::{error, info};
 use serenity::model::application::interaction::{Interaction, InteractionResponseType};
 use serenity::model::gateway::Ready;
+use serenity::model::channel::Message;
 use serenity::prelude::*;
 use serenity::{async_trait, model::prelude::GuildId};
 use shuttle_service::error::CustomError;
@@ -65,6 +65,7 @@ impl EventHandler for Bot {
                 .create_application_command(|command| commands::welcome::register(command))
                 .create_application_command(|command| commands::numberinput::register(command))
                 .create_application_command(|command| commands::attachmentinput::register(command))
+                .create_application_command(|command| commands::eightball::register(command))
         })
         .await;
 
@@ -78,6 +79,10 @@ impl EventHandler for Bot {
         println!("I created the following global slash command: {:#?}", global_command);
     }
 
+    async fn message(&self, _ctx: Context, msg: Message) {
+        println!("{}", msg.content);
+    }
+
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
         if let Interaction::ApplicationCommand(command) = interaction {
             println!("Received command interaction: {:#?}", command);
@@ -85,6 +90,7 @@ impl EventHandler for Bot {
             let content = match command.data.name.as_str() {
                 "ping" => commands::ping::run(&command.data.options),
                 "id" => commands::id::run(&command.data.options),
+                "8ball" => commands::eightball::run(&command.data.options),
                 "attachmentinput" => commands::attachmentinput::run(&command.data.options),
                 _ => "not implemented :(".to_string(),
             };

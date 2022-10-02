@@ -3,7 +3,6 @@ use std::{
     fs::read_to_string
 };
 use discord_fank::get_client;
-use std::env;
 
 #[tokio::main]
 async fn main() {
