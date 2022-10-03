@@ -24,3 +24,4 @@ sqlx = { version = "0.6.1", features = [
     "postgres",
 ] }
 log = "0.4.17"
+itertools = "0.10.5"

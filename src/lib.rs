@@ -99,7 +99,7 @@ impl EventHandler for Bot {
                 msg.author.id,
                 msg.timestamp.unix_timestamp()
             );
-            db::insert(&self.database, msg).await.unwrap();
+            db::insert(&self.database, msg.author.id.to_string().parse::<i64>().unwrap(), msg.author.name, msg.timestamp.unix_timestamp()).await.unwrap();
         }
     }
 

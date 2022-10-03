@@ -1,3 +1,4 @@
+use serde::__private::de;
 use serenity::model::{prelude::Message, user::User};
 use sqlx::{FromRow, PgPool};
 use std::fmt::Write;
@@ -11,41 +12,30 @@ struct Rank {
     pub level: i64
 }
 
-pub fn calculate_level() -> i64 {
-    1
+pub fn calculate_level(msg_count: i64, level: i64) -> i64 {
+    let cost = 50.0;
+    let lvl_as_flt = level as f64;
+    let derived_cost = lvl_as_flt * cost * f64::powf(1.07, lvl_as_flt) + (25.0 * lvl_as_flt);
+    return derived_cost.ceil() as i64;
 }
 
-pub(crate) async fn get_level(pool: &PgPool, user: User) -> Result<i64, sqlx::Error> {
+pub(crate) async fn get_count_and_level(pool: &PgPool, user_id: i64) -> (i64, i64) {
     let table: Vec<Rank> =
-        sqlx::query_as("SELECT level FROM rank WHERE user_id = $1")
-            .bind(user.id.to_string())
+        sqlx::query_as("SELECT * FROM rank WHERE user_id = $1")
+            .bind(user_id)
             .fetch_all(pool)
-            .await?;
-
-    let response = table.first().unwrap().level;
-    Ok(response)
+            .await.unwrap();
+    return if table.get(0).is_some(){(table.get(0).unwrap().msg_count, table.get(0).unwrap().level)} else {(1, 0)};
 }
 
-pub(crate) async fn get_msg_count(pool: &PgPool, user: User) -> Result<i64, sqlx::Error> {
-    let table: Vec<Rank> =
-        sqlx::query_as("SELECT msg_count FROM rank WHERE user_id = $1")
-            .bind(user.id.to_string())
-            .fetch_all(pool)
-            .await?;
-
-    let response = table.first().unwrap().level;
-    Ok(response)
-}
-
-pub(crate) async fn insert(pool: &PgPool, msg: Message) -> Result<String, sqlx::Error> {
-    let user_id_string = msg.author.id.to_string();
-    //let current_msg_count = get_msg_count(pool, msg.author).await?;
+pub(crate) async fn insert(pool: &PgPool, user_id: i64, user_name: String, last_msg: i64) -> Result<String, sqlx::Error> {
+    let count_and_level = get_count_and_level(pool, user_id).await;
     sqlx::query("INSERT INTO rank (user_id, user_name, last_msg, msg_count, level) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (user_id) WHERE user_id = $1 DO UPDATE SET last_msg=$3, msg_count=rank.msg_count + 1, level=$5")
-        .bind(user_id_string.parse::<i64>().unwrap())
-        .bind(msg.author.name)
-        .bind(msg.timestamp.unix_timestamp())
+        .bind(user_id)
+        .bind(user_name)
+        .bind(last_msg)
         .bind(1)
-        .bind(calculate_level())
+        .bind(calculate_level(count_and_level.0, count_and_level.1))
         .execute(pool)
         .await?;
 
