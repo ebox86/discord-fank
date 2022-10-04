@@ -20,13 +20,15 @@ pub fn run(options: &[CommandDataOption]) -> String {
 }
 
 pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand {
-    command.name("8ball").description("Ask the magic 8ball").create_option(
+    command
+    .name("fun")
+    .description("Fun commands")
+    .create_option(
         |option| {
             option
-                .name("question")
+                .name("8ball")
                 .description("The question you wish to ask")
-                .kind(CommandOptionType::String)
-                .required(true)
+                .kind(CommandOptionType::SubCommand)
         },
     )
 }

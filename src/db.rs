@@ -1,5 +1,5 @@
 use serde::__private::de;
-use serenity::model::{prelude::Message, user::User};
+use serenity::{model::{prelude::Message, user::User}, futures::future::ok};
 use sqlx::{FromRow, PgPool};
 use std::fmt::Write;
 
@@ -12,11 +12,20 @@ struct Rank {
     pub level: i64
 }
 
-pub fn calculate_level(msg_count: i64, level: i64) -> i64 {
+pub fn calculate_level(msg_count: i64, mut level: i64) -> (i64, bool) {
+    print!("calling calculate level\n");
+    print!("msg_count: {} level: {}\n", msg_count, level);
     let cost = 50.0;
     let lvl_as_flt = level as f64;
     let derived_cost = lvl_as_flt * cost * f64::powf(1.07, lvl_as_flt) + (25.0 * lvl_as_flt);
-    return derived_cost.ceil() as i64;
+    print!("derived_cost: {}\n", derived_cost.to_string());
+    let mut level_up = false;
+    if msg_count as f64 >= derived_cost {
+        level_up = true;
+        print!("incrementing to next level!\n");
+        level+=1;
+    }
+    return (level, level_up);
 }
 
 pub(crate) async fn get_count_and_level(pool: &PgPool, user_id: i64) -> (i64, i64) {
@@ -28,18 +37,18 @@ pub(crate) async fn get_count_and_level(pool: &PgPool, user_id: i64) -> (i64, i6
     return if table.get(0).is_some(){(table.get(0).unwrap().msg_count, table.get(0).unwrap().level)} else {(1, 0)};
 }
 
-pub(crate) async fn insert(pool: &PgPool, user_id: i64, user_name: String, last_msg: i64) -> Result<String, sqlx::Error> {
+pub(crate) async fn insert(pool: &PgPool, user_id: i64, user_name: String, last_msg: i64) -> bool {
     let count_and_level = get_count_and_level(pool, user_id).await;
+    let level = calculate_level(count_and_level.0, count_and_level.1);
     sqlx::query("INSERT INTO rank (user_id, user_name, last_msg, msg_count, level) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (user_id) WHERE user_id = $1 DO UPDATE SET last_msg=$3, msg_count=rank.msg_count + 1, level=$5")
         .bind(user_id)
         .bind(user_name)
         .bind(last_msg)
         .bind(1)
-        .bind(calculate_level(count_and_level.0, count_and_level.1))
+        .bind(level.0)
         .execute(pool)
-        .await?;
-
-    Ok(format!("updated 1 row"))
+        .await;
+    return level.1;
 }
 
 pub(crate) async fn list(pool: &PgPool) -> Result<String, sqlx::Error> {

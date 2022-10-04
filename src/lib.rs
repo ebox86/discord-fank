@@ -1,7 +1,6 @@
 mod commands;
 mod db;
 
-use serenity::model::application::command::Command;
 use log::{error, info};
 use serenity::model::application::interaction::{Interaction, InteractionResponseType};
 use serenity::model::gateway::Ready;
@@ -72,34 +71,25 @@ impl EventHandler for Bot {
         let commands = GuildId::set_application_commands(&self.discord_guild_id, &ctx.http, |commands| {
             commands
                 .create_application_command(|command| commands::ping::register(command))
-                .create_application_command(|command| commands::id::register(command))
-                .create_application_command(|command| commands::welcome::register(command))
-                .create_application_command(|command| commands::numberinput::register(command))
-                .create_application_command(|command| commands::attachmentinput::register(command))
-                .create_application_command(|command| commands::eightball::register(command))
+                .create_application_command(|command| commands::fun::register(command))
                 .create_application_command(|command| commands::rank::register(command))
         })
         .await;
-
-        //println!("I now have the following guild slash commands: {:#?}", commands);
-
-        // let global_command = Command::create_global_application_command(&ctx.http, |command| {
-        //     commands::wonderful_command::register(command)
-        // })
-        // .await;
-
-        // println!("I created the following global slash command: {:#?}", global_command);
     }
 
     async fn message(&self, _ctx: Context, msg: Message) {
+        let channel_id = msg.channel_id;
         if !msg.author.bot {
-            println!("message: {}, author name: {}, author id: {}, created: {}", 
-                msg.content, 
-                msg.author.name, 
-                msg.author.id,
-                msg.timestamp.unix_timestamp()
-            );
-            db::insert(&self.database, msg.author.id.to_string().parse::<i64>().unwrap(), msg.author.name, msg.timestamp.unix_timestamp()).await.unwrap();
+            // println!("message: {}, author name: {}, author id: {}, created: {}", 
+            //     msg.content, 
+            //     msg.author.name, 
+            //     msg.author.id,
+            //     msg.timestamp.unix_timestamp()
+            // );
+            let level_up = db::insert(&self.database, msg.author.id.to_string().parse::<i64>().unwrap(), msg.author.name, msg.timestamp.unix_timestamp()).await;
+            if level_up {
+                channel_id.send_message(&_ctx.http, |m| {m.content("LEVEL UP!")}).await.unwrap();
+            }
         }
     }
 
@@ -115,13 +105,15 @@ impl EventHandler for Bot {
                         // Rank subcommands here
                         "list" => {
                             db::list(&self.database).await.unwrap()
-                        }
+                        },
+                        // "promote" => {CommandDataOptionValue:: => {
+                            
+                        //     }
+                        // }
                         _ => "Please enter a valid todo".to_string(),
                     }
                 },
-                "id" => commands::id::run(&command.data.options),
-                "8ball" => commands::eightball::run(&command.data.options),
-                "attachmentinput" => commands::attachmentinput::run(&command.data.options),
+                "fun" => commands::fun::run(&command.data.options),
                 _ => "not implemented :(".to_string(),
             };
 

@@ -6,39 +6,58 @@ pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicatio
     command
     .name("rank")
     .description("Server rank commands")
-    // .create_option(|option| {
-    //     option
-    //         .name("add")
-    //         .description("Add a new todo")
-    //         .kind(CommandOptionType::SubCommand)
-    //         .create_sub_option(|option| {
-    //             option
-    //                 .name("note")
-    //                 .description("The todo note to add")
-    //                 .kind(CommandOptionType::String)
-    //                 .min_length(2)
-    //                 .max_length(100)
-    //                 .required(true)
-    //         })
-    // })
-    // .create_option(|option| {
-    //     option
-    //         .name("complete")
-    //         .description("The todo to complete")
-    //         .kind(CommandOptionType::SubCommand)
-    //         .create_sub_option(|option| {
-    //             option
-    //                 .name("index")
-    //                 .description("The index of the todo to complete")
-    //                 .kind(CommandOptionType::Integer)
-    //                 .min_int_value(1)
-    //                 .required(true)
-    //         })
-    // })
     .create_option(|option| {
         option
-            .name("list")
-            .description("List your current rank list")
+            .name("promote")
+            .description("promote a user")
             .kind(CommandOptionType::SubCommand)
+            .create_sub_option(|option| {
+                option
+                    .name("user")
+                    .description("the user to promote")
+                    .kind(CommandOptionType::User)
+                    .min_length(2)
+                    .max_length(100)
+                    .required(true)
+            })
+            .create_sub_option(|option| {
+                option
+                    .name("value")
+                    .description("the value to promote by")
+                    .kind(CommandOptionType::String)
+                    .min_length(2)
+                    .max_length(100)
+                    .required(true)
+            })
+    })
+    .create_option(|option| {
+        option
+            .name("demote")
+            .description("demote a user")
+            .kind(CommandOptionType::SubCommand)
+            .create_sub_option(|option| {
+                option
+                    .name("user")
+                    .description("the user to demote")
+                    .kind(CommandOptionType::User)
+                    .min_int_value(1)
+                    .required(true)
+            })
+            .create_sub_option(|option| {
+                option
+                    .name("value")
+                    .description("The value to demote by")
+                    .kind(CommandOptionType::String)
+                    .min_length(2)
+                    .max_length(100)
+                    .required(true)
+            })
+    })
+    .create_option(
+        |option| {
+            option
+                .name("list")
+                .description("List your current rank list")
+                .kind(CommandOptionType::SubCommand)
     })
 }
