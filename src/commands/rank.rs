@@ -24,7 +24,7 @@ pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicatio
                 option
                     .name("value")
                     .description("the value to promote by")
-                    .kind(CommandOptionType::String)
+                    .kind(CommandOptionType::Number)
                     .min_length(2)
                     .max_length(100)
                     .required(true)
@@ -47,7 +47,7 @@ pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicatio
                 option
                     .name("value")
                     .description("The value to demote by")
-                    .kind(CommandOptionType::String)
+                    .kind(CommandOptionType::Number)
                     .min_length(2)
                     .max_length(100)
                     .required(true)
