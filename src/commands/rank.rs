@@ -2,11 +2,18 @@ use serenity::builder::CreateApplicationCommand;
 use serenity::model::prelude::command::CommandOptionType;
 
 pub fn level_cost(level: f64) -> i64 {
-    let cost: f64 = 15.0;
-    let initial_modifer: f64 = 8.0;
-    let multiplier: f64 = 1.07;
-    return (level * cost * multiplier.powf(level) + (initial_modifer * level)).round() as i64;
+    let cost: f64 = 8.0;
+    let initial_modifer: f64 = 15.0;
+    let multiplier: f64 = 1.75;
+    if level == 0.0 {
+        return 1;
+    } else {
+        return (multiplier * level * (cost * level + level.log(1.03))).round() as i64;
+        //return (cost * multiplier.powf(level) + (initial_modifer * level)).round() as i64;
+    }
 }
+
+// Current points minus previous level cost
 
 pub fn calculate_level(points: i64, level: i64) -> (i64, bool) {
     print!("calling calculate level\n");

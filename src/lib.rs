@@ -85,20 +85,6 @@ impl EventHandler for Bot {
         if !msg.author.bot {
             let level_up = db::insert(&self.database, msg.author.id.to_string().parse::<i64>().unwrap(), msg.author.name, msg.timestamp.unix_timestamp()).await;
             if level_up.1 {
-                // channel_id.send_message(&_ctx.http, |m| {
-                //     m.content(|c| c {
-                //     // m.embed(|e| e
-                //     //     .color(0x00ff00)
-                //     //     .title(format!("Welcome to level {}!", level_up.0))
-                //     //     .footer(|f|
-                //     //         {
-                //     //             f.text(format!("Next level at {} xp.",commands::rank::level_cost(level_up.0 as f64)))
-                //     //         }
-                //     //     )
-                //         m.text(format!("LEVEL UP!\nNext level at {} xp.", commands::rank::level_cost(level_up.0 as f64)))
-                //     }
-                //     )
-                // }).await.unwrap();
                 channel_id.send_message(&_ctx.http, 
                     |m| {
                         m.content(
