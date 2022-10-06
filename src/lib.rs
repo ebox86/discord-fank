@@ -1,8 +1,6 @@
 mod commands;
 mod db;
 
-use std::f32::consts::E;
-
 use log::{error, info};
 use serenity::model::application::interaction::{Interaction, InteractionResponseType};
 use serenity::model::gateway::Ready;
@@ -112,6 +110,8 @@ impl EventHandler for Bot {
 
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
         if let Interaction::ApplicationCommand(command) = interaction {
+            //let invoking_user = &interaction.application_command().unwrap().member.unwrap().user;
+            let invoking_user = &command.member.as_ref().unwrap().user;
             println!("Received command interaction: {:#?}", command.data.name);
 
             let content = match command.data.name.as_str() {
@@ -119,7 +119,30 @@ impl EventHandler for Bot {
                 "rank" => {
                     let command = command.data.options.get(0).expect("Expected command");
                     match command.name.as_str() {
-                        // Rank subcommands here
+                        //Rank subcommands here
+                        "stats" => {
+                            let mut user_id: i64 = 0;
+                            let mut user_name: String = String::new();
+                            if command.options.len() < 1
+                            {
+                                user_id = invoking_user.id.to_string().parse::<i64>().unwrap();
+                                user_name = invoking_user.name.clone();
+                            } else {
+                                let user = command.options.get(0).expect("Expected user");
+                                match user.resolved.as_ref().unwrap() {
+                                    CommandDataOptionValue::User(_user, _) => {
+                                        user_id = _user.id.to_string().parse::<i64>().unwrap();
+                                        user_name = user.name.clone();
+                                    },
+                                    _ => {
+                                        println!("Expected user");
+                                    }
+                                }
+                            }
+                            let current = db::get_count_and_level(&self.database, user_id).await;
+                            let next_cost = commands::rank::level_cost(current.1 as f64);
+                            format!("{} is level {} with {} xp.\nNext level at {} xp.", user_name, current.1, current.0, next_cost)
+                        },
                         "list" => {
                             db::list(&self.database).await.unwrap()
                         },

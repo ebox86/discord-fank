@@ -1,5 +1,5 @@
 use serenity::builder::CreateApplicationCommand;
-use serenity::model::prelude::command::CommandOptionType;
+use serenity::model::prelude::command::{CommandOptionType, CommandType};
 
 pub fn level_cost(level: f64) -> i64 {
     let cost: f64 = 15.0;
@@ -25,7 +25,7 @@ pub fn calculate_level(points: i64, level: i64) -> (i64, bool) {
 pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand {
     command
     .name("rank")
-    .description("Server rank commands")
+    .description("Rank command")
     .create_option(|option| {
         option
             .name("promote")
@@ -50,29 +50,6 @@ pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicatio
                     .required(true)
             })
     })
-    .create_option(|option| {
-        option
-            .name("demote")
-            .description("demote a user")
-            .kind(CommandOptionType::SubCommand)
-            .create_sub_option(|option| {
-                option
-                    .name("user")
-                    .description("the user to demote")
-                    .kind(CommandOptionType::User)
-                    .min_int_value(1)
-                    .required(true)
-            })
-            .create_sub_option(|option| {
-                option
-                    .name("value")
-                    .description("The value to demote by")
-                    .kind(CommandOptionType::Number)
-                    .min_length(2)
-                    .max_int_value(100)
-                    .required(true)
-            })
-    })
     .create_option(
         |option| {
             option
@@ -80,4 +57,21 @@ pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicatio
                 .description("List your current rank list")
                 .kind(CommandOptionType::SubCommand)
     })
+    .create_option(
+        |option| {
+            option
+                .name("stats")
+                .description("current rank stats")
+                .kind(CommandOptionType::SubCommand)
+                .create_sub_option(|option| {
+                    option
+                        .name("user")
+                        .description("the user")
+                        .kind(CommandOptionType::User)
+                        .min_length(2)
+                        .max_length(100)
+                        .required(false)
+                })
+    })
+    
 }
