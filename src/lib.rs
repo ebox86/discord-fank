@@ -79,9 +79,10 @@ impl EventHandler for Bot {
     }
 
     async fn message(&self, _ctx: Context, msg: Message) {
+        let message_xp = 3;
         let channel_id = msg.channel_id;
         if !msg.author.bot {
-            let level_up = db::insert(&self.database, msg.author.id.to_string().parse::<i64>().unwrap(), msg.author.name, msg.timestamp.unix_timestamp()).await;
+            let level_up = db::insert(&self.database, msg.author.id.to_string().parse::<i64>().unwrap(), msg.author.name, msg.timestamp.unix_timestamp(), message_xp).await;
             if level_up.1 {
                 channel_id.send_message(&_ctx.http, 
                     |m| {
