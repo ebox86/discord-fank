@@ -22,8 +22,6 @@ To test locally, run
 
 `cargo shuttle run`
 
-> Note: Currently local testing does not work on M1 macs due to secrets management dependency of postgres docker image. Future secrets managment is subject to change by shuttle team which should fix this.
-
 To deploy changes to the shuttle hosted environment, run
 
 `cargo shuttle deploy`

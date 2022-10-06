@@ -1,12 +1,13 @@
 mod commands;
 mod db;
 
+use std::f32::consts::E;
+
 use log::{error, info};
 use serenity::model::application::interaction::{Interaction, InteractionResponseType};
 use serenity::model::gateway::Ready;
 use serenity::model::channel::Message;
 use serenity::model::prelude::interaction::application_command::CommandDataOptionValue;
-use serenity::model::user::User;
 use serenity::prelude::*;
 use serenity::{async_trait, model::prelude::GuildId};
 use shuttle_service::error::CustomError;
@@ -82,15 +83,29 @@ impl EventHandler for Bot {
     async fn message(&self, _ctx: Context, msg: Message) {
         let channel_id = msg.channel_id;
         if !msg.author.bot {
-            // println!("message: {}, author name: {}, author id: {}, created: {}", 
-            //     msg.content, 
-            //     msg.author.name, 
-            //     msg.author.id,
-            //     msg.timestamp.unix_timestamp()
-            // );
             let level_up = db::insert(&self.database, msg.author.id.to_string().parse::<i64>().unwrap(), msg.author.name, msg.timestamp.unix_timestamp()).await;
-            if level_up {
-                channel_id.send_message(&_ctx.http, |m| {m.content("LEVEL UP!")}).await.unwrap();
+            if level_up.1 {
+                // channel_id.send_message(&_ctx.http, |m| {
+                //     m.content(|c| c {
+                //     // m.embed(|e| e
+                //     //     .color(0x00ff00)
+                //     //     .title(format!("Welcome to level {}!", level_up.0))
+                //     //     .footer(|f|
+                //     //         {
+                //     //             f.text(format!("Next level at {} xp.",commands::rank::level_cost(level_up.0 as f64)))
+                //     //         }
+                //     //     )
+                //         m.text(format!("LEVEL UP!\nNext level at {} xp.", commands::rank::level_cost(level_up.0 as f64)))
+                //     }
+                //     )
+                // }).await.unwrap();
+                channel_id.send_message(&_ctx.http, 
+                    |m| {
+                        m.content(
+                            format!(
+                                "Welcome to level {}!\nNext level at {} xp.", 
+                                level_up.0, 
+                                commands::rank::level_cost(level_up.0 as f64)))}).await.unwrap();
             }
         }
     }
@@ -133,37 +148,9 @@ impl EventHandler for Bot {
                                 value = _value.clone().round() as i64;
                             }
                             let current = db::get_count_and_level(&self.database, user_id).await;
-                            let new_level = db::calculate_level(current.0 + value, current.1);
+                            let new_level = commands::rank::calculate_level(current.0 + value, current.1);
                             db::update_level(&self.database, user_id, user_name, current.0 + value, new_level.0).await.unwrap()
                         },
-                        // "demote" => {
-                        //     let mut user_id: i64 = 0;
-                        //     let mut user_name: String = String::new();
-                        //     let mut value = 0;
-                        //     if command.options.len() < 2
-                        //     {
-                        //         panic!("Expected User Arguments '[User] [Value]'")
-                        //     }
-                        //     if let CommandDataOptionValue::User(_user, _member) = command.options[0]
-                        //         .resolved
-                        //         .as_ref()
-                        //         .expect("Expected User Object")
-                        //     {
-                        //         user_id = _user.id.to_string().parse::<i64>().unwrap().clone();
-                        //         user_name = _user.name.clone();
-                        //     }
-
-                        //     if let CommandDataOptionValue::Number(_value) = command.options[1]
-                        //         .resolved
-                        //         .as_ref()
-                        //         .expect("Expected User Object")
-                        //     {
-                        //         value = _value.clone().round() as i64;
-                        //     }
-                        //     let current = db::get_count_and_level(&self.database, user_id).await;
-                        //     let new_level = db::calculate_level(if current.0 - value >= 0 {current.0 - value} else {0}, current.1);
-                        //     db::update_level(&self.database, user_id, user_name, current.0 + value, new_level.0).await.unwrap()
-                        // }
                         _ => "Please enter a valid todo".to_string(),
                     }
                 },
