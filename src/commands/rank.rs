@@ -1,15 +1,13 @@
 use serenity::builder::CreateApplicationCommand;
-use serenity::model::prelude::command::{CommandOptionType, CommandType};
+use serenity::model::prelude::command::CommandOptionType;
 
 pub fn level_cost(level: f64) -> i64 {
     let cost: f64 = 8.0;
-    let initial_modifer: f64 = 15.0;
     let multiplier: f64 = 1.75;
     return if level == 0.0 {
         1
     } else {
         (multiplier * level * (cost * level + level.log(1.03))).round() as i64
-        //return (cost * multiplier.powf(level) + (initial_modifer * level)).round() as i64;
     }
 }
 

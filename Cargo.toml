@@ -26,3 +26,4 @@ sqlx = { version = "0.6.1", features = [
 log = "0.4.17"
 itertools = "0.10.5"
 chrono = "0.4.22"
+serde_json = "1.0.85"
