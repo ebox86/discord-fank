@@ -1,7 +1,7 @@
 use sqlx::{FromRow, PgPool};
 use std::{fmt::Write};
 use chrono::Utc;
-use crate::{commands::rank, services};
+use crate::{commands::rank, services::{self, stocks::price_diff_formatter}};
 
 #[derive(FromRow)]
 struct Rank {
@@ -73,11 +73,9 @@ pub(crate) async fn add_watchlist(pool: &PgPool, user_id: i64, list: Vec<&str>) 
     print!("adding {} to watchlist for user {}\n", format!("{:?}", list), user_id);
     let mut current_list: Vec<String> = get_watchlist(pool, user_id).await;
     print!("current list: {:?}\n", current_list);
-    //current_list.append(list.iter().map(|s| s.as_str()).collect());
     for s in &list {
-        current_list.push(s.to_string());
+        current_list.push(s.trim().to_string().to_uppercase());
     }
-    print!("new list: {:?}\n", current_list);
     let _table: Vec<Watchlist> =
         sqlx::query_as("INSERT INTO watchlist (user_id, list) VALUES ($1, $2) ON CONFLICT (user_id) WHERE user_id = $1 DO UPDATE SET list=$2")
             .bind(user_id)
@@ -116,7 +114,7 @@ pub(crate) async fn show_watchlist(pool: &PgPool, iex_api_key: &String, user_id:
         let mut response = "Your watchlist 👇:\n".to_string();
         for (i, ticker) in table.iter().enumerate() {
             let quote = services::stocks::get_quote(iex_api_key.to_string(), ticker.to_string()).await;
-            writeln!(&mut response, "{}. {}\t${}", i + 1, ticker, quote.as_str()).unwrap();
+            writeln!(&mut response, "{}. {}\t${}\t{}", i + 1, ticker, quote.0.to_string(), price_diff_formatter(quote.0, quote.1)).unwrap();
         }
         Ok(response)
     }

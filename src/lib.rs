@@ -127,7 +127,6 @@ impl EventHandler for Bot {
                             {
                                 ticker = _ticker.split(",").collect::<Vec<&str>>();
                             }
-
                             db::add_watchlist(&self.database, invoking_user.id.to_string().parse::<i64>().unwrap(), ticker).await.unwrap()
                         },
                         "list" => db::list_watchlist(&self.database).await.unwrap(),
@@ -167,7 +166,9 @@ impl EventHandler for Bot {
                             }
                             let current = db::get_count_and_level(&self.database, user_id).await;
                             let next_cost = commands::rank::level_cost(current.1 as f64);
-                            format!("{} is level {} with {} xp.\nNext level at {} xp.", user_name, current.1, current.0, next_cost)
+                            let watchlist = db::get_watchlist(&self.database, user_id).await;
+                            let watchlist_count = watchlist.len();
+                            format!("{} is level {} with {} xp.\nNext level at {} xp.{}", user_name, current.1, current.0, next_cost, "\nWatchlist count: ".to_owned() + &watchlist_count.to_string())
                         },
                         "list" => {
                             db::list_rank(&self.database).await.unwrap()
