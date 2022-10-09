@@ -12,8 +12,9 @@ use serenity::model::prelude::interaction::application_command::CommandDataOptio
 use serenity::prelude::*;
 use serenity::{async_trait, model::prelude::GuildId};
 use shuttle_service::error::CustomError;
-use shuttle_service::{SecretStore, Service};
+use shuttle_service::{SecretStore};
 use sqlx::{Executor, PgPool};
+use sync_wrapper::SyncWrapper;
 
 
 struct Handler {
@@ -23,33 +24,21 @@ struct Handler {
 }
 
 struct BotService {
-    serenity_client: Client
+    serenity: serenity::Client,
+    framework: sync_wrapper::SyncWrapper<axum::Router>
 }
 
-// impl BotService {
-//     async fn start(mut self) -> Result<(), shuttle_service::error::CustomError> {
-//         if let Err(why) = self.serenity_client.start().await {
-//             println!("Client error: {:?}", why);
-//         }
-//         Ok(())
-//     }
-// }
-
 #[shuttle_service::async_trait]
-impl Service for BotService {
-        async fn bind( mut self: Box<Self>,  addr: std::net::SocketAddr) -> Result<(), shuttle_service::error::Error> {
-
-        // define routes here
-        let app = Router::new()
-            .route("/", get(api::routes::hello::hello_world));
-
-        tracing::debug!("listening on {}", addr);
-
-        axum::Server::bind(&addr).serve(app.into_make_service()).await.expect("Err creating client");
-        if let Err(why) = self.serenity_client.start().await {
-            println!("Client error: {:?}", why);
+impl shuttle_service::Service for BotService {
+    async fn bind( mut self: Box<Self>,  addr: std::net::SocketAddr) -> Result<(), shuttle_service::Error> {
+        let mut serenity = self.serenity;
+        let framework = self.framework.get_mut().clone();
+        let axum = axum::Server::bind(&addr)
+            .serve(framework.into_make_service());
+        tokio::select! {
+            _ = serenity.start() => Ok(()),
+            _ = axum => Ok(())
         }
-        Ok(())
     }
 }
 
@@ -83,13 +72,24 @@ async fn init( #[shared::Postgres] pool: PgPool ) -> Result<BotService, shuttle_
         discord_guild_id: GuildId(discord_guild_id.parse().unwrap()),
         database: pool,
     };
+    // serenity client
     let intents = GatewayIntents::GUILD_MESSAGES | GatewayIntents::MESSAGE_CONTENT;
-    let serenity_client = Client::builder(discord_token, intents)
+    let serenity = Client::builder(discord_token, intents)
         .event_handler(handler)
         .await
         .expect("Err creating client");
-    //discord_client.start().await.expect("Err starting client");
-    Ok(BotService{serenity_client})
+
+    // axum router
+    let axum = Router::new()
+    .route("/", get(api::routes::hello::hello_world));
+    //.route("/leaderboard", get(api::routes::leaderboard::top(pool.clone()).await.unwrap()));
+
+
+    Ok(
+        BotService{
+            serenity,
+            framework: SyncWrapper::new(axum)
+        })
 }
 
 #[async_trait]
