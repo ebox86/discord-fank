@@ -1,7 +1,9 @@
 mod commands;
 mod db;
 mod services;
+mod api;
 
+use axum::{routing::get, Router};
 use log::info;
 use serenity::model::application::interaction::{Interaction, InteractionResponseType};
 use serenity::model::gateway::Ready;
@@ -10,18 +12,49 @@ use serenity::model::prelude::interaction::application_command::CommandDataOptio
 use serenity::prelude::*;
 use serenity::{async_trait, model::prelude::GuildId};
 use shuttle_service::error::CustomError;
-use shuttle_service::SecretStore;
+use shuttle_service::{SecretStore, Service};
 use sqlx::{Executor, PgPool};
 
-struct Bot {
+
+struct Handler {
     iex_api_key: String,
-    _client: reqwest::Client,
 	discord_guild_id: GuildId,
-    database: PgPool,
+    database: PgPool
+}
+
+struct BotService {
+    serenity_client: Client
+}
+
+// impl BotService {
+//     async fn start(mut self) -> Result<(), shuttle_service::error::CustomError> {
+//         if let Err(why) = self.serenity_client.start().await {
+//             println!("Client error: {:?}", why);
+//         }
+//         Ok(())
+//     }
+// }
+
+#[shuttle_service::async_trait]
+impl Service for BotService {
+        async fn bind( mut self: Box<Self>,  addr: std::net::SocketAddr) -> Result<(), shuttle_service::error::Error> {
+
+        // define routes here
+        let app = Router::new()
+            .route("/", get(api::routes::hello::hello_world));
+
+        tracing::debug!("listening on {}", addr);
+
+        axum::Server::bind(&addr).serve(app.into_make_service()).await.expect("Err creating client");
+        if let Err(why) = self.serenity_client.start().await {
+            println!("Client error: {:?}", why);
+        }
+        Ok(())
+    }
 }
 
 #[shuttle_service::main]
-async fn serenity(#[shared::Postgres] pool: PgPool) -> shuttle_service::ShuttleSerenity {
+async fn init( #[shared::Postgres] pool: PgPool ) -> Result<BotService, shuttle_service::Error> {
     // discord keys and guild id here
     let discord_token = pool
         .get_secret("DISCORD_TOKEN")
@@ -45,38 +78,22 @@ async fn serenity(#[shared::Postgres] pool: PgPool) -> shuttle_service::ShuttleS
 
     let pool = pool;
 
-    let client = get_client(
-        &discord_token,
-        &iex_api_key,
-        discord_guild_id.parse().unwrap(),
-        pool
-    )
-    .await;
-
-    Ok(client)
-}
-
-pub async fn get_client(
-    discord_token: &str,
-    polygon_api_key: &str,
-    discord_guild_id: u64,
-    pool: PgPool
-) -> Client {
+    let handler = Handler {
+        iex_api_key,
+        discord_guild_id: GuildId(discord_guild_id.parse().unwrap()),
+        database: pool,
+    };
     let intents = GatewayIntents::GUILD_MESSAGES | GatewayIntents::MESSAGE_CONTENT;
-
-    Client::builder(discord_token, intents)
-        .event_handler(Bot {
-            iex_api_key: polygon_api_key.to_owned(),
-            _client: reqwest::Client::new(),
-            discord_guild_id: GuildId(discord_guild_id),
-            database: pool,
-        })
+    let serenity_client = Client::builder(discord_token, intents)
+        .event_handler(handler)
         .await
-        .expect("Err creating client")
+        .expect("Err creating client");
+    //discord_client.start().await.expect("Err starting client");
+    Ok(BotService{serenity_client})
 }
 
 #[async_trait]
-impl EventHandler for Bot {
+impl EventHandler for Handler {
     async fn ready(&self, ctx: Context, ready: Ready) {
         info!("{} is connected!", ready.user.name);
 
