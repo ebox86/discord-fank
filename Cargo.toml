@@ -18,8 +18,15 @@ serenity = { version = "0.11.5", default-features = false, features = [
     "model",
 ] }
 shuttle-service = { version = "0.6.0" }
-shuttle-shared-db = { version = "0.6.0", features = ["postgres"] }
-tokio = { version = "1.20.1", features = ["rt", "macros", "rt-multi-thread"] }
+shuttle-shared-db = { version = "0.6.0", features = [
+    "postgres"
+] }
+shuttle-secrets = "0.6.0"
+tokio = { version = "1.20.1", features = [
+    "rt", 
+    "macros", 
+    "rt-multi-thread"
+] }
 sqlx = { version = "0.6.1", features = [
     "runtime-tokio-native-tls",
     "postgres"
@@ -36,5 +43,4 @@ tracing-subscriber = "0.3.16"
 axum-sqlx-tx = "0.4.0"
 clokwerk = "0.4.0-rc1"
 chrono-tz = "0.6.3"
-shuttle-secrets = "0.6.0"
 anyhow = "1.0.65"
