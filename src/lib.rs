@@ -1,9 +1,10 @@
 mod commands;
 mod db;
 mod services;
-mod api;
+mod routes;
+mod scheduler;
 
-use axum::{routing::get, Router};
+use chrono::{Utc, Duration};
 use log::info;
 use serenity::model::application::interaction::{Interaction, InteractionResponseType};
 use serenity::model::gateway::Ready;
@@ -15,7 +16,6 @@ use shuttle_service::error::CustomError;
 use shuttle_service::{SecretStore};
 use sqlx::{Executor, PgPool};
 use sync_wrapper::SyncWrapper;
-
 
 struct Handler {
     iex_api_key: String,
@@ -37,7 +37,7 @@ impl shuttle_service::Service for BotService {
             .serve(framework.into_make_service());
         tokio::select! {
             _ = serenity.start() => Ok(()),
-            _ = axum => Ok(())
+            _ = axum => Ok(()),
         }
     }
 }
@@ -65,7 +65,9 @@ async fn init( #[shared::Postgres] pool: PgPool ) -> Result<BotService, shuttle_
         .await
         .map_err(CustomError::new)?;
 
-    let pool = pool;
+    let pool = pool.clone();
+    let pool1 = pool.clone();
+    let pool2 = pool.clone();
 
     let handler = Handler {
         iex_api_key,
@@ -80,10 +82,9 @@ async fn init( #[shared::Postgres] pool: PgPool ) -> Result<BotService, shuttle_
         .expect("Err creating client");
 
     // axum router
-    let axum = Router::new()
-    .route("/", get(api::routes::hello::hello_world));
-    //.route("/leaderboard", get(api::routes::leaderboard::top(pool.clone()).await.unwrap()));
-
+    let axum = routes::create_router().layer(axum_sqlx_tx::Layer::new(pool1));
+    
+    scheduler::start_scheduler(serenity.cache_and_http.http.clone(), pool2);
 
     Ok(
         BotService{
@@ -103,6 +104,7 @@ impl EventHandler for Handler {
                 .create_application_command(|command| commands::fun::register(command))
                 .create_application_command(|command| commands::rank::register(command))
                 .create_application_command(|command| commands::watchlist::register(command))
+                .create_application_command(|command| commands::comp::register(command))
         })
         .await;
     }
@@ -132,6 +134,7 @@ impl EventHandler for Handler {
 
             let content = match command.data.name.as_str() {
                 "ping" => commands::ping::run(&command.data.options),
+                "fun" => commands::fun::run(&command.data.options),
                 "watchlist" => {
                     let command = command.data.options.get(0).expect("Expected a command");
                     match command.name.as_str() {
@@ -156,6 +159,61 @@ impl EventHandler for Handler {
                             db::show_watchlist(&self.database, &self.iex_api_key, user_id).await.unwrap()
                         },
                         _ => "Please enter a watchlist command".to_string(),
+                    }
+                },
+                "comp" => {
+                    let command = command.data.options.get(0).expect("Expected a command");
+                    match command.name.as_str() {
+                        "create" => {
+                            let mut name = String::new();
+                            let start_date = Utc::now();
+                            let mut end_date = Utc::now();
+                            if let CommandDataOptionValue::String (_name) = command.options[0]
+                                .resolved
+                                .as_ref()
+                                .expect("Expected String")
+                            {
+                                name = _name.to_string();
+                            }
+                            if let CommandDataOptionValue::Integer (_length) = command.options[1]
+                            .resolved
+                            .as_ref()
+                            .expect("Expected String")
+                            {
+                                end_date = start_date + Duration::days(*_length);
+                            }
+                            db::create_comp(&self.database, name, start_date.timestamp(), end_date.timestamp()).await.unwrap()
+                        },
+                        "list" => db::list_comp(&self.database, invoking_user.id.to_string().parse::<i64>().unwrap()).await.unwrap(),
+                        "register" => {
+                            let mut comp_id: i64 = 0;
+                            let mut tickers: Vec<&str> = Vec::new();
+                            if let CommandDataOptionValue::Integer (_comp_id) = command.options[0]
+                                .resolved
+                                .as_ref()
+                                .expect("Expected String")
+                            {
+                                comp_id = *_comp_id;
+                            }
+                            if let CommandDataOptionValue::String (_ticker) = command.options[1]
+                                .resolved
+                                .as_ref()
+                                .expect("Expected String")
+                            {
+                                tickers = _ticker.split(",").collect::<Vec<&str>>();
+                            }
+                            db::register_comp(&self.database, invoking_user.id.to_string().parse::<i64>().unwrap(), comp_id, tickers, self.iex_api_key.to_string()).await.unwrap()
+                        },
+                        // "show" => db::list_comp(&self.database).await.unwrap(),
+                        // "clear" => {
+                        //     let user_id: i64 = invoking_user.id.to_string().parse::<i64>().unwrap();
+                        //     db::clear_comp(&self.database, user_id).await.unwrap()
+                        // },
+                        // "show" => {
+                        //     let user_id: i64 = invoking_user.id.to_string().parse::<i64>().unwrap();
+                        //     db::show_comp(&self.database, &self.iex_api_key, user_id).await.unwrap()
+                        // },
+                        _ => "Please enter a comp command".to_string(),
                     }
                 },
                 "rank" => {
@@ -220,8 +278,7 @@ impl EventHandler for Handler {
                         },
                         _ => "Please enter a valid todo".to_string(),
                     }
-                },
-                "fun" => commands::fun::run(&command.data.options),
+                }
                 _ => "not implemented :(".to_string(),
             };
 

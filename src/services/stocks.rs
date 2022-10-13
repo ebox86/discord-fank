@@ -32,3 +32,11 @@ pub fn price_diff_formatter(price: f64, previous_price: f64) -> String {
     let diff_percent = if diff_percent > 0.0 { format!("(+{}%)\t🟢", diff_percent) } else { format!("({}%)\t🔴", diff_percent) };
     return format!("{} {}", diff, diff_percent);
 }
+
+pub fn price_diff (price: f64, previous_price: f64) -> (f64, f64) {
+    let diff = price - previous_price;
+    let diff_percent = diff / previous_price * 100.0;
+    let diff_percent = f64::trunc(diff_percent  * 100.0) / 100.0;
+    let diff = f64::trunc(diff  * 100.0) / 100.0;
+    return (diff, diff_percent);
+}

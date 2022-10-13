@@ -21,7 +21,7 @@ shuttle-service = { version = "0.5.2", features = ["secrets"] }
 tokio = { version = "1.20.1", features = ["rt", "macros", "rt-multi-thread"] }
 sqlx = { version = "0.6.1", features = [
     "runtime-tokio-native-tls",
-    "postgres",
+    "postgres"
 ] }
 log = "0.4.17"
 itertools = "0.10.5"
@@ -32,3 +32,6 @@ sync_wrapper = "0.1.1"
 async-session = "3.0.0"
 tracing = "0.1.37"
 tracing-subscriber = "0.3.16"
+axum-sqlx-tx = "0.4.0"
+clokwerk = "0.4.0-rc1"
+chrono-tz = "0.6.3"
