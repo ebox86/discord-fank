@@ -4,6 +4,7 @@ mod services;
 mod routes;
 mod scheduler;
 
+use anyhow::Context as _;
 use chrono::{Utc, Duration};
 use log::info;
 use serenity::model::application::interaction::{Interaction, InteractionResponseType};
@@ -13,7 +14,7 @@ use serenity::model::prelude::interaction::application_command::CommandDataOptio
 use serenity::prelude::*;
 use serenity::{async_trait, model::prelude::GuildId};
 use shuttle_service::error::CustomError;
-use shuttle_service::{SecretStore};
+use shuttle_secrets::SecretStore;
 use sqlx::{Executor, PgPool};
 use sync_wrapper::SyncWrapper;
 
@@ -43,23 +44,23 @@ impl shuttle_service::Service for BotService {
 }
 
 #[shuttle_service::main]
-async fn init( #[shared::Postgres] pool: PgPool ) -> Result<BotService, shuttle_service::Error> {
+async fn init( 
+    #[shuttle_shared_db::Postgres] pool: PgPool,
+    #[shuttle_secrets::Secrets] secret_store: SecretStore,
+) -> Result<BotService, shuttle_service::Error> {
     // discord keys and guild id here
-    let discord_token = pool
-        .get_secret("DISCORD_TOKEN")
-        .await
-        .map_err(CustomError::new)?;
+    let discord_token = secret_store
+        .get("DISCORD_TOKEN")
+        .context("Failed to get discord token")?;
 
-    let discord_guild_id = pool
-        .get_secret("DISCORD_GUILD_ID")
-        .await
-        .map_err(CustomError::new)?;
+    let discord_guild_id = secret_store
+        .get("DISCORD_GUILD_ID")
+        .context("Failed to get discord guild id")?;
 
     // api keys here
-    let iex_api_key = pool
-        .get_secret("IEX_API_KEY")
-        .await
-        .map_err(CustomError::new)?;
+    let iex_api_key = secret_store
+        .get("IEX_API_KEY")
+        .context("Failed to get IEX API key")?;
 
     pool.execute(include_str!("../schema.sql"))
         .await
