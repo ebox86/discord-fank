@@ -1,6 +1,7 @@
 use sqlx::{FromRow, PgPool};
 use std::{fmt::Write};
 use chrono::Utc;
+use chrono::prelude::*;
 use crate::{commands::rank, services::{self, stocks::price_diff_formatter}};
 
 #[derive(FromRow)]
@@ -24,9 +25,10 @@ struct CompList {
 }
 
 #[derive(FromRow)]
-struct Competitions {
+pub struct Competitions {
     pub id: i32,
     pub active: bool,
+    pub reg_open: bool,
     pub name: String,
     pub start_date: i64,
     pub end_date: i64
@@ -153,7 +155,8 @@ pub(crate) async fn list_watchlist(pool: &PgPool) -> Result<String, sqlx::Error>
 
 pub(crate) async fn create_comp(pool: &PgPool, name: String, start: i64, end: i64) -> Result<String, sqlx::Error> {
     let _table =
-        sqlx::query("INSERT INTO competitions (active, start_date, end_date, name) VALUES ($1, $2, $3, $4)")
+        sqlx::query("INSERT INTO competitions (active, reg_open, start_date, end_date, name) VALUES ($1, $2, $3, $4, $5)")
+            .bind(true)
             .bind(true)
             .bind(start)
             .bind(end)
@@ -173,9 +176,9 @@ pub(crate) async fn list_comp(pool: &PgPool, user_id: i64) -> Result<String, sql
     for (_, line) in table.iter().enumerate() {
         let is_participant = is_registered(pool, user_id, line.id.into()).await;
         let participant_string = if is_participant {format!("You are registered! ✅ ")} else {format!("")};
-        writeln!(&mut response, "ID: {}\tName: {}\t{}", line.id, line.name, participant_string).unwrap();
+        let reg_status = if line.reg_open {format!("Open")} else {format!("Closed")};
+        writeln!(&mut response, "ID: {}\tName: {}\tRegistration: {}\t{}", line.id, line.name, reg_status, participant_string).unwrap();
     }
-
     Ok(response)
 }
 
@@ -188,7 +191,10 @@ pub(crate) async fn register_comp(pool: &PgPool, user_id: i64, comp_id: i64, lis
     if valudate_comp_id.len() == 0 {
         return Ok(format!("❌ Invalid competition ID"));
     }
-    let mut current_list: Vec<String> = get_comp(pool, user_id, comp_id).await;
+    if get_registration_status(pool, comp_id).await.unwrap() == false {
+        return Ok(format!("❌ Registration is closed for this competition"));
+    }
+    let mut current_list: Vec<String> = get_comp_with_user(pool, user_id, comp_id).await;
     if current_list.len() > 0 {
         return Ok(format!("❌ You are already registered for this competition!"));
     }
@@ -214,7 +220,18 @@ pub(crate) async fn register_comp(pool: &PgPool, user_id: i64, comp_id: i64, lis
     Ok(format!("✅ Registered for competition {} with list {}", comp_id, format!("{:?}\n\nGood Luck!", current_list)))
 }
 
-pub(crate) async fn get_comp(pool: &PgPool, user_id: i64, comp_id: i64) -> Vec<String> {
+pub(crate) async fn is_valid_comp(pool: &PgPool, comp_id: i64) -> Result<bool, sqlx::Error> {
+    let valudate_comp_id = sqlx::query("SELECT * FROM competitions WHERE id = $1 AND active = true")
+        .bind(comp_id)
+        .fetch_all(pool)
+        .await.unwrap();
+    if valudate_comp_id.len() == 0 {
+        return Ok(false);
+    }
+    Ok(true)
+}
+
+pub(crate) async fn get_comp_with_user(pool: &PgPool, user_id: i64, comp_id: i64) -> Vec<String> {
     let table: Vec<CompList> =
         sqlx::query_as("SELECT * FROM complist WHERE user_id = $1 AND comp_id = $2")
             .bind(user_id)
@@ -222,7 +239,37 @@ pub(crate) async fn get_comp(pool: &PgPool, user_id: i64, comp_id: i64) -> Vec<S
             .fetch_all(pool)
             .await.unwrap();
 
-    return if table.get(0).is_some() {serde_json::from_str(table.get(0).unwrap().list.as_str()).expect("Couldn't deserialize recipients") } else {Vec::<String>::new()};
+    return if table.get(0).is_some() {
+        serde_json::from_str(table.get(0).unwrap().list.as_str()).expect("Couldn't deserialize recipients") 
+    } else {
+        Vec::<String>::new()
+    };
+}
+
+pub(crate) async fn get_competition_by_id(pool: &PgPool, comp_id: i64) -> Vec<Competitions> {
+    let table: Vec<Competitions> =
+        sqlx::query_as("SELECT * FROM competitions WHERE id = $1")
+            .bind(comp_id)
+            .fetch_all(pool)
+            .await.unwrap();
+    return table;
+}
+
+pub(crate) async fn show_comp_metadata(pool: &PgPool, comp_id: i64) -> Result<String, sqlx::Error> {
+    let table: Vec<Competitions> =
+        sqlx::query_as("SELECT * FROM competitions WHERE id = $1")
+            .bind(comp_id)
+            .fetch_all(pool)
+            .await.unwrap();
+    let mut response = format!("🏁 Competition Metadata\n");
+    for (_, line) in table.iter().enumerate() {
+        let reg_status = if line.reg_open {format!("Open")} else {format!("Closed")};
+        let start_date_as_string = convert_unix_timestamp_to_date_string(line.start_date);
+        let end_date_as_string = convert_unix_timestamp_to_date_string(line.end_date);
+        writeln!(&mut response, "ID: {}\nName: {}\nRegistration: {}\nStart: {}\nEnd: {}", line.id, line.name, reg_status, start_date_as_string, end_date_as_string).unwrap();
+    }
+
+    Ok(response)
 }
 
 pub (crate) async fn is_registered(pool: &PgPool, user_id: i64, comp_id: i64) -> bool {
@@ -234,4 +281,76 @@ pub (crate) async fn is_registered(pool: &PgPool, user_id: i64, comp_id: i64) ->
             .await.unwrap();
 
     return table.len() > 0;
+}
+
+pub (crate) async fn edit_registration(pool: &PgPool, user_id: i64, comp_id: i64, list: Vec<&str>, iex_api_key: String) -> Result<String, sqlx::Error> {
+    let mut current_list: Vec<String> = get_comp_with_user(pool, user_id, comp_id).await;
+    if current_list.len() == 0 {
+        return Ok(format!("❌ You are not registered for this competition!"));
+    }
+    for s in &list {
+        current_list.push(s.trim().to_string().to_uppercase());
+    }
+
+    for symbol in &current_list {
+        let quote = services::stocks::get_quote(iex_api_key.to_string(), symbol.to_string()).await;
+        if quote.0 == 0.0 {
+            return Ok(format!("❌ {} is not a valid stock symbol", symbol));
+        }
+    }
+
+    let _table: Vec<Competitions> =
+        sqlx::query_as("UPDATE complist SET list = $1 WHERE user_id = $2 AND comp_id = $3")
+            .bind(serde_json::to_string(&current_list).unwrap())
+            .bind(user_id)
+            .bind(comp_id)
+            .fetch_all(pool)
+            .await?;
+
+    Ok(format!("✅ Updated registration for competition {} with list {}", comp_id, format!("{:?}\n\nGood Luck!", current_list)))
+}
+
+pub(crate) async fn get_all_comps(pool: &PgPool) -> Vec<Competitions> {
+    let table: Vec<Competitions> =
+        sqlx::query_as("SELECT * FROM competitions WHERE active = true")
+            .fetch_all(pool)
+            .await.unwrap();
+
+    return table;
+}
+
+pub(crate) async fn set_registration_status(pool: &PgPool, comp_id: i64, status: bool) -> Result<String, sqlx::Error> {
+    let comp_valid = is_valid_comp(pool, comp_id);
+    if !comp_valid.await.unwrap() {
+        return Ok(format!("❌ Invalid competition ID"));
+    }
+    let _table: Vec<Competitions> =
+        sqlx::query_as("UPDATE competitions SET reg_open = $1 WHERE id = $2")
+            .bind(status)
+            .bind(comp_id)
+            .fetch_all(pool)
+            .await?;
+
+    Ok(format!("✅ Updated registration status for competition {}", comp_id))
+}
+
+pub(crate) async fn get_registration_status(pool: &PgPool, comp_id: i64) -> Result<bool, sqlx::Error> {
+    let comp_valid = is_valid_comp(pool, comp_id);
+    if !comp_valid.await.unwrap() {
+        return Ok(false);
+    }
+    let table: Vec<Competitions> =
+        sqlx::query_as("SELECT * FROM competitions WHERE id = $1")
+            .bind(comp_id)
+            .fetch_all(pool)
+            .await.unwrap();
+
+    return Ok(table.get(0).unwrap().reg_open);
+}
+
+
+pub(crate) fn convert_unix_timestamp_to_date_string(timestamp: i64) -> String {
+    let naive = NaiveDateTime::from_timestamp(timestamp, 0);
+    let dt: DateTime<Utc> = DateTime::from_utc(naive, Utc);
+    return dt.format("%Y-%m-%d %H:%M:%S").to_string()
 }

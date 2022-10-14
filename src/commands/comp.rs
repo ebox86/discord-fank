@@ -29,6 +29,28 @@ pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicatio
         })
         .create_option(|option| {
             option
+                .name("edit")
+                .description("edits a user's current competition")
+                .kind(serenity::model::prelude::command::CommandOptionType::SubCommand)
+                .create_sub_option(|option| {
+                    option
+                        .name("competition")
+                        .description("The competition to edit")
+                        .kind(serenity::model::prelude::command::CommandOptionType::Integer)
+                        .required(true)
+                })
+                .create_sub_option(|option| {
+                    option
+                        .name("registration")
+                        .description("Registration open or closed")
+                        .kind(serenity::model::prelude::command::CommandOptionType::Integer)
+                        .required(false)
+                        .add_int_choice("Open", 1)
+                        .add_int_choice("Closed", 0)
+                })
+        })
+        .create_option(|option| {
+            option
                 .name("create")
                 .description("creates a new competition")
                 .kind(serenity::model::prelude::command::CommandOptionType::SubCommand)

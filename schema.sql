@@ -23,6 +23,7 @@ CREATE TABLE complist (
 CREATE TABLE competitions (
   id serial PRIMARY KEY,
   active BOOLEAN NOT NULL,
+  reg_open BOOLEAN NOT NULL,
   start_date BIGINT NOT NULL,
   end_date BIGINT NOT NULL,
   name TEXT NOT NULL,

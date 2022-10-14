@@ -205,15 +205,39 @@ impl EventHandler for Handler {
                             }
                             db::register_comp(&self.database, invoking_user.id.to_string().parse::<i64>().unwrap(), comp_id, tickers, self.iex_api_key.to_string()).await.unwrap()
                         },
-                        // "show" => db::list_comp(&self.database).await.unwrap(),
-                        // "clear" => {
-                        //     let user_id: i64 = invoking_user.id.to_string().parse::<i64>().unwrap();
-                        //     db::clear_comp(&self.database, user_id).await.unwrap()
-                        // },
                         // "show" => {
-                        //     let user_id: i64 = invoking_user.id.to_string().parse::<i64>().unwrap();
-                        //     db::show_comp(&self.database, &self.iex_api_key, user_id).await.unwrap()
+                        //     let mut comp_id: i64 = 0;
+                        //     if let CommandDataOptionValue::Integer (_comp_id) = command.options[0]
+                        //         .resolved
+                        //         .as_ref()
+                        //         .expect("Expected String")
+                        //     {
+                        //         comp_id = *_comp_id;
+                        //     }
+                        //     db::show_comp(&self.database, comp_id).await.unwrap()
                         // },
+                        "edit" => {
+                            let mut comp_id: i64 = 0;
+                            let mut reg: bool = false;
+                            if let CommandDataOptionValue::Integer (_comp_id) = command.options[0]
+                                .resolved
+                                .as_ref()
+                                .expect("Expected String")
+                            {
+                                comp_id = *_comp_id;
+                            }
+                            if command.options.len() > 1 {
+                                if let CommandDataOptionValue::Boolean (_reg) = command.options[1]
+                                    .resolved
+                                    .as_ref()
+                                    .expect("Expected String")
+                                {
+                                    reg = *_reg;
+                                }
+                                db::set_registration_status(&self.database, comp_id, reg).await.unwrap();
+                            }
+                            db::show_comp_metadata(&self.database, comp_id).await.unwrap()
+                        }
                         _ => "Please enter a comp command".to_string(),
                     }
                 },
