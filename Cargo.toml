@@ -1,8 +1,14 @@
 [package]
 name = "discord-fank"
-version = "0.1.0"
+description = "a discord bot for financial trading servers"
+version = "0.2.0"
 edition = "2021"
 publish = false
+authors = ["Evan Kohout <ebox86@gmail.com>"]
+readme = "Readme.md"
+homepage = "https://fankbot.xyz/"
+repository = "https://github.com/ebox86/discord-fank"
+license = "MIT OR Apache-2.0"
 
 [lib]
 crate-type = ["cdylib", "lib"]
