@@ -13,3 +13,4 @@ pub async fn show(state: &State<PgPool>) -> Result<Json<Vec<db::Rank>>, BadReque
         .map_err(|e| BadRequest(Some(e.to_string())))?;
     Ok(Json(rank.into_iter().collect()))
 }
+
