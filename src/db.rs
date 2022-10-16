@@ -3,9 +3,11 @@ use std::{fmt::Write};
 use chrono::Utc;
 use chrono::prelude::*;
 use crate::{commands::rank, services::{self, stocks::price_diff_formatter}};
+use serde::{Deserialize, Serialize};
 
-#[derive(FromRow)]
-struct Rank {
+
+#[derive(Serialize, FromRow)]
+pub struct Rank {
     pub user_id: i64,
     pub last_msg: i64,
     pub points: i64,

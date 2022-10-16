@@ -4,6 +4,9 @@ mod services;
 mod routes;
 mod scheduler;
 
+#[macro_use]
+extern crate rocket;
+
 use anyhow::Context as _;
 use chrono::{Utc, Duration};
 use log::info;
@@ -15,8 +18,12 @@ use serenity::prelude::*;
 use serenity::{async_trait, model::prelude::GuildId};
 use shuttle_service::error::CustomError;
 use shuttle_secrets::SecretStore;
-use sqlx::{Executor, PgPool};
+use sqlx::{Executor, PgPool, FromRow};
 use sync_wrapper::SyncWrapper;
+use rocket::response::status::BadRequest;
+use rocket::serde::json::Json;
+use rocket::State;
+use serde::{Deserialize, Serialize};
 
 struct Handler {
     iex_api_key: String,
@@ -26,19 +33,19 @@ struct Handler {
 
 struct BotService {
     serenity: serenity::Client,
-    framework: sync_wrapper::SyncWrapper<axum::Router>
+    database: PgPool
 }
 
 #[shuttle_service::async_trait]
 impl shuttle_service::Service for BotService {
-    async fn bind( mut self: Box<Self>,  addr: std::net::SocketAddr) -> Result<(), shuttle_service::Error> {
-        let mut serenity = self.serenity;
-        let framework = self.framework.get_mut().clone();
-        let axum = axum::Server::bind(&addr)
-            .serve(framework.into_make_service());
+    async fn bind( mut self: Box<Self>,  _addr: std::net::SocketAddr) -> Result<(), shuttle_service::Error> {
         tokio::select! {
-            _ = serenity.start() => Ok(()),
-            _ = axum => Ok(()),
+            _ = self.serenity.start() => Ok(()),
+            _ = rocket::build()
+            .mount("/hello", routes![routes::test::world])
+            .mount("/rank", routes![routes::rank::show])
+            .manage(self.database)
+            .launch() => Ok(())
         }
     }
 }
@@ -81,17 +88,15 @@ async fn init(
         .event_handler(handler)
         .await
         .expect("Err creating client");
-
-    // axum router
-    let axum = routes::create_router().layer(axum_sqlx_tx::Layer::new(pool1));
     
-    scheduler::start_scheduler(serenity.cache_and_http.http.clone(), pool2);
+    scheduler::start_scheduler(serenity.cache_and_http.http.clone(), pool1);
 
     Ok(
         BotService{
             serenity,
-            framework: SyncWrapper::new(axum)
-        })
+            database: pool2
+        }
+    )
 }
 
 #[async_trait]
@@ -318,6 +323,196 @@ impl EventHandler for Handler {
                 println!("Cannot respond to slash command: {}", why);
             }
         }
+    }
+
+    async fn application_command_permissions_update(
+        &self,
+        _ctx: Context,
+        _permission: serenity::model::prelude::command::CommandPermission,
+    ) {
+    }
+
+    async fn auto_moderation_rule_create(&self, _ctx: Context, _rule: serenity::model::prelude::automod::Rule) {}
+
+    async fn auto_moderation_rule_update(&self, _ctx: Context, _rule: serenity::model::prelude::automod::Rule) {}
+
+    async fn auto_moderation_rule_delete(&self, _ctx: Context, _rule: serenity::model::prelude::automod::Rule) {}
+
+    async fn auto_moderation_action_execution(&self, _ctx: Context, _execution: serenity::model::prelude::automod::ActionExecution) {}
+
+    async fn channel_create(&self, _ctx: Context, _channel: &serenity::model::prelude::GuildChannel) {}
+
+    async fn category_create(&self, _ctx: Context, _category: &serenity::model::prelude::ChannelCategory) {}
+
+    async fn category_delete(&self, _ctx: Context, _category: &serenity::model::prelude::ChannelCategory) {}
+
+    async fn channel_delete(&self, _ctx: Context, _channel: &serenity::model::prelude::GuildChannel) {}
+
+    async fn channel_pins_update(&self, _ctx: Context, _pin: serenity::model::prelude::ChannelPinsUpdateEvent) {}
+
+    async fn channel_update(&self, _ctx: Context, _new_data: serenity::model::prelude::Channel) {}
+
+    async fn guild_ban_addition(&self, _ctx: Context, _guild_id: GuildId, _banned_user: serenity::model::user::User) {}
+
+    async fn guild_ban_removal(&self, _ctx: Context, _guild_id: GuildId, _unbanned_user: serenity::model::user::User) {}
+
+    async fn guild_create(&self, _ctx: Context, _guild: serenity::model::prelude::Guild) {}
+
+    async fn guild_delete(&self, _ctx: Context, _incomplete: serenity::model::prelude::UnavailableGuild) {}
+
+    async fn guild_emojis_update(
+        &self,
+        _ctx: Context,
+        _guild_id: GuildId,
+        _current_state: std::collections::HashMap<serenity::model::prelude::EmojiId, serenity::model::prelude::Emoji>,
+    ) {
+    }
+
+    async fn guild_integrations_update(&self, _ctx: Context, _guild_id: GuildId) {}
+
+    async fn guild_member_addition(&self, _ctx: Context, _new_member: serenity::model::prelude::Member) {}
+
+    async fn guild_member_removal(&self, _ctx: Context, _guild_id: GuildId, _kicked: serenity::model::user::User) {}
+
+    async fn guild_member_update(&self, _ctx: Context, _new: serenity::model::prelude::GuildMemberUpdateEvent) {}
+
+    async fn guild_members_chunk(&self, _ctx: Context, _chunk: serenity::model::prelude::GuildMembersChunkEvent) {}
+
+    async fn guild_role_create(&self, _ctx: Context, _new: serenity::model::prelude::Role) {}
+
+    async fn guild_role_delete(&self, _ctx: Context, _guild_id: GuildId, _removed_role_id: serenity::model::prelude::RoleId) {
+    }
+
+    async fn guild_role_update(&self, _ctx: Context, _new_data: serenity::model::prelude::Role) {}
+
+    async fn guild_stickers_update(
+        &self,
+        _ctx: Context,
+        _guild_id: GuildId,
+        _current_state: std::collections::HashMap<serenity::model::prelude::StickerId, serenity::model::sticker::Sticker>,
+    ) {
+    }
+
+    async fn guild_unavailable(&self, _ctx: Context, _guild_id: GuildId) {}
+
+    async fn guild_update(&self, _ctx: Context, _new_but_incomplete_data: serenity::model::prelude::PartialGuild) {}
+
+    async fn invite_create(&self, _ctx: Context, _data: serenity::model::prelude::InviteCreateEvent) {}
+
+    async fn invite_delete(&self, _ctx: Context, _data: serenity::model::prelude::InviteDeleteEvent) {}
+
+    async fn message_delete(
+        &self,
+        _ctx: Context,
+        _channel_id: serenity::model::prelude::ChannelId,
+        _deleted_message_id: serenity::model::prelude::MessageId,
+        _guild_id: Option<GuildId>,
+    ) {
+    }
+
+    async fn message_delete_bulk(
+        &self,
+        _ctx: Context,
+        _channel_id: serenity::model::prelude::ChannelId,
+        _multiple_deleted_messages_ids: Vec<serenity::model::prelude::MessageId>,
+        _guild_id: Option<GuildId>,
+    ) {
+    }
+
+    async fn message_update(&self, _ctx: Context, _new_data: serenity::model::prelude::MessageUpdateEvent) {}
+
+    async fn reaction_add(&self, _ctx: Context, _add_reaction: serenity::model::prelude::Reaction) {}
+
+    async fn reaction_remove(&self, _ctx: Context, _removed_reaction: serenity::model::prelude::Reaction) {}
+
+    async fn reaction_remove_all(
+        &self,
+        _ctx: Context,
+        _channel_id: serenity::model::prelude::ChannelId,
+        _removed_from_message_id: serenity::model::prelude::MessageId,
+    ) {
+    }
+
+    async fn presence_replace(&self, _ctx: Context, _: Vec<serenity::model::prelude::Presence>) {}
+
+    async fn presence_update(&self, _ctx: Context, _new_data: serenity::model::prelude::Presence) {}
+
+    async fn resume(&self, _ctx: Context, _: serenity::model::prelude::ResumedEvent) {}
+
+    async fn shard_stage_update(&self, _ctx: Context, _: serenity::client::bridge::gateway::event::ShardStageUpdateEvent) {}
+
+    async fn typing_start(&self, _ctx: Context, _: serenity::model::prelude::TypingStartEvent) {}
+
+    async fn unknown(&self, _ctx: Context, _name: String, _raw: serenity::json::Value) {}
+
+    async fn user_update(&self, _ctx: Context, _new_data: serenity::model::user::CurrentUser) {}
+
+    async fn voice_server_update(&self, _ctx: Context, _: serenity::model::prelude::VoiceServerUpdateEvent) {}
+
+    async fn voice_state_update(&self, _ctx: Context, _: serenity::model::voice::VoiceState) {}
+
+    async fn webhook_update(
+        &self,
+        _ctx: Context,
+        _guild_id: GuildId,
+        _belongs_to_channel_id: serenity::model::prelude::ChannelId,
+    ) {
+    }
+
+    async fn integration_create(&self, _ctx: Context, _integration: serenity::model::prelude::Integration) {}
+
+    async fn integration_update(&self, _ctx: Context, _integration: serenity::model::prelude::Integration) {}
+
+    async fn integration_delete(
+        &self,
+        _ctx: Context,
+        _integration_id: serenity::model::prelude::IntegrationId,
+        _guild_id: GuildId,
+        _application_id: Option<serenity::model::prelude::ApplicationId>,
+    ) {
+    }
+
+    async fn stage_instance_create(&self, _ctx: Context, _stage_instance: serenity::model::prelude::StageInstance) {}
+
+    async fn stage_instance_update(&self, _ctx: Context, _stage_instance: serenity::model::prelude::StageInstance) {}
+
+    async fn stage_instance_delete(&self, _ctx: Context, _stage_instance: serenity::model::prelude::StageInstance) {}
+
+    async fn thread_create(&self, _ctx: Context, _thread: serenity::model::prelude::GuildChannel) {}
+
+    async fn thread_update(&self, _ctx: Context, _thread: serenity::model::prelude::GuildChannel) {}
+
+    async fn thread_delete(&self, _ctx: Context, _thread: serenity::model::prelude::PartialGuildChannel) {}
+
+    async fn thread_list_sync(&self, _ctx: Context, _thread_list_sync: serenity::model::prelude::ThreadListSyncEvent) {}
+
+    async fn thread_member_update(&self, _ctx: Context, _thread_member: serenity::model::prelude::ThreadMember) {}
+
+    async fn thread_members_update(
+        &self,
+        _ctx: Context,
+        _thread_members_update: serenity::model::prelude::ThreadMembersUpdateEvent,
+    ) {
+    }
+
+    async fn guild_scheduled_event_create(&self, _ctx: Context, _event: serenity::model::prelude::ScheduledEvent) {}
+
+    async fn guild_scheduled_event_update(&self, _ctx: Context, _event: serenity::model::prelude::ScheduledEvent) {}
+
+    async fn guild_scheduled_event_delete(&self, _ctx: Context, _event: serenity::model::prelude::ScheduledEvent) {}
+
+    async fn guild_scheduled_event_user_add(
+        &self,
+        _ctx: Context,
+        _subscribed: serenity::model::prelude::GuildScheduledEventUserAddEvent,
+    ) {
+    }
+
+    async fn guild_scheduled_event_user_remove(
+        &self,
+        _ctx: Context,
+        _unsubscribed: serenity::model::prelude::GuildScheduledEventUserRemoveEvent,
+    ) {
     }
 }
 
