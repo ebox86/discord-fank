@@ -24,6 +24,10 @@ use rocket::response::status::BadRequest;
 use rocket::serde::json::Json;
 use rocket::State;
 use serde::{Deserialize, Serialize};
+use rocket::http::Header;
+use rocket::{Request, Response};
+use rocket::fairing::{Fairing, Info, Kind};
+
 
 struct Handler {
     iex_api_key: String,
@@ -35,10 +39,6 @@ struct BotService {
     serenity: serenity::Client,
     database: PgPool
 }
-
-use rocket::http::Header;
-use rocket::{Request, Response};
-use rocket::fairing::{Fairing, Info, Kind};
 
 pub struct CORS;
 
