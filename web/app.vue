@@ -2,8 +2,10 @@
     <div>
       <NuxtPage />
     </div>
-  </template>
-  
-  <script></script>
-  <style>
-  </style>
+</template>
+
+<script>
+
+</script>
+<style>
+</style>

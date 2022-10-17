@@ -1,5 +1,7 @@
 <template>
+
 <div class="rank">
+    <h2>user_name: {{ user_name }}</h2>
     <p>user_id: {{ user_id }}</p>
     <p>points: {{ points }}</p>
     <p>level: {{ level }}</p>
@@ -10,7 +12,7 @@
 <script>
 export default {
     name: "Rank",
-    props: ['user_id', 'points', 'level']
+    props: ['user_id', 'points', 'level', 'user_name']
 }
 
 </script>

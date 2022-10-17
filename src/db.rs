@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, FromRow)]
 pub struct Rank {
     pub user_id: i64,
+    pub user_name: String,
     pub last_msg: i64,
     pub points: i64,
     pub level: i64
