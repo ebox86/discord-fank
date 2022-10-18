@@ -1,3 +1,4 @@
+use serenity::model::guild;
 use sqlx::{FromRow, PgPool};
 use std::{fmt::Write};
 use chrono::Utc;
@@ -8,6 +9,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, FromRow)]
 pub struct Rank {
+    pub guild_id: i64,
     pub user_id: i64,
     pub user_name: String,
     pub last_msg: i64,
@@ -16,12 +18,14 @@ pub struct Rank {
 }
 #[derive(FromRow)]
 struct Watchlist {
+    pub guild_id: i64,
     pub user_id: i64,
     pub list: String
 }
 
 #[derive(FromRow)]
 struct CompList {
+    pub guild_id: i64,
     pub user_id: i64,
     pub list: String,
     pub comp_id: i64
@@ -29,6 +33,7 @@ struct CompList {
 
 #[derive(FromRow)]
 pub struct Competitions {
+    pub guild_id: i64,
     pub id: i32,
     pub active: bool,
     pub reg_open: bool,
@@ -37,10 +42,11 @@ pub struct Competitions {
     pub end_date: i64
 }
 
-pub(crate) async fn update_level(pool: &PgPool, user_id: i64, user_name: String, points: i64, level: i64) -> Result<String, sqlx::Error> {
+pub(crate) async fn update_level(pool: &PgPool, guild_id: i64, user_id: i64, user_name: String, points: i64, level: i64) -> Result<String, sqlx::Error> {
     print!("updating user with new points: {} and level: {}\n", points, level);
     let _table: Vec<Rank> =
-        sqlx::query_as("INSERT INTO rank (user_id, user_name, last_msg, points, level) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (user_id) WHERE user_id = $1 DO UPDATE SET points=$4, level=$5")
+        sqlx::query_as("INSERT INTO rank (guild_id, user_id, user_name, last_msg, points, level) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (guild_id, user_id) WHERE guild_id = $1 AND user_id = $2 DO UPDATE SET points=$5, level=$6")
+            .bind(guild_id)
             .bind(user_id)
             .bind(user_name)
             .bind(Utc::now().timestamp())
@@ -52,19 +58,23 @@ pub(crate) async fn update_level(pool: &PgPool, user_id: i64, user_name: String,
     Ok(format!("{}", "Updated 1 row"))
 }
 
-pub(crate) async fn get_count_and_level(pool: &PgPool, user_id: i64) -> (i64, i64) {
+pub(crate) async fn get_count_and_level(pool: &PgPool, guild_id: i64, user_id: i64) -> (i64, i64) {
     let table: Vec<Rank> =
-        sqlx::query_as("SELECT * FROM rank WHERE user_id = $1")
+        sqlx::query_as("SELECT * FROM rank WHERE guild_id = $1 AND user_id = $2")
+            .bind(guild_id)
             .bind(user_id)
             .fetch_all(pool)
             .await.unwrap();
     return if table.get(0).is_some(){(table.get(0).unwrap().points, table.get(0).unwrap().level)} else {(0, 0)};
 }
 
-pub(crate) async fn increment_level(pool: &PgPool, user_id: i64, user_name: String, last_msg: i64, points: i64) -> (i64,bool) {
-    let count_and_level = get_count_and_level(pool, user_id).await;
+pub(crate) async fn increment_level(pool: &PgPool, guild_id: i64, user_id: i64, user_name: String, last_msg: i64, points: i64) -> (i64,bool) {
+    print!("incrementing level for user: {} in guild: {}\n", user_id, guild_id);
+    let count_and_level = get_count_and_level(pool, guild_id, user_id).await;
     let level = rank::calculate_level(count_and_level.0, count_and_level.1);
-    let _insert = sqlx::query("INSERT INTO rank (user_id, user_name, last_msg, points, level) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (user_id) WHERE user_id = $1 DO UPDATE SET last_msg=$3, points=rank.points + $4, level=$5")
+    print!("guild_id: {}, user_id: {}, user_name: {}, last_msg: {}, points: {}, level: {}\n", guild_id, user_id, user_name, last_msg, points, level.0);
+    let _insert = sqlx::query("INSERT INTO rank (guild_id, user_id, user_name, last_msg, points, level) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (guild_id, user_id) WHERE guild_id = $1 AND user_id = $2 DO UPDATE SET last_msg=$4, points=rank.points + $5, level=$6")
+        .bind(guild_id)
         .bind(user_id)
         .bind(user_name)
         .bind(last_msg)
@@ -72,13 +82,15 @@ pub(crate) async fn increment_level(pool: &PgPool, user_id: i64, user_name: Stri
         .bind(level.0)
         .execute(pool)
         .await;
+
+    print!("level: {:?}\n", level);
     return level;
 }
 
-pub(crate) async fn list_rank(pool: &PgPool) -> Result<String, sqlx::Error> {
+pub(crate) async fn list_rank(pool: &PgPool, guild_id: i64) -> Result<String, sqlx::Error> {
     let table: Vec<Rank> =
-        sqlx::query_as("SELECT * FROM rank")
-            //.bind(user_id)
+        sqlx::query_as("SELECT * FROM rank WHERE guild_id=$1 ORDER BY points DESC")
+            .bind(guild_id)
             .fetch_all(pool)
             .await?;
 
@@ -90,15 +102,16 @@ pub(crate) async fn list_rank(pool: &PgPool) -> Result<String, sqlx::Error> {
     Ok(response)
 }
 
-pub(crate) async fn add_watchlist(pool: &PgPool, user_id: i64, list: Vec<&str>) -> Result<String, sqlx::Error> {
-    print!("adding {} to watchlist for user {}\n", format!("{:?}", list), user_id);
-    let mut current_list: Vec<String> = get_watchlist(pool, user_id).await;
+pub(crate) async fn add_watchlist(pool: &PgPool, guild_id: i64, user_id: i64, list: Vec<&str>) -> Result<String, sqlx::Error> {
+    print!("adding {} to watchlist for user {} in guild {}\n", format!("{:?}", list), user_id, guild_id);
+    let mut current_list: Vec<String> = get_watchlist(pool, guild_id, user_id).await;
     print!("current list: {:?}\n", current_list);
     for s in &list {
         current_list.push(s.trim().to_string().to_uppercase());
     }
     let _table: Vec<Watchlist> =
-        sqlx::query_as("INSERT INTO watchlist (user_id, list) VALUES ($1, $2) ON CONFLICT (user_id) WHERE user_id = $1 DO UPDATE SET list=$2")
+        sqlx::query_as("INSERT INTO watchlist (guild_id, user_id, list) VALUES ($1, $2, $3) ON CONFLICT (guild_id, user_id) WHERE guild_id = $1 AND user_id = $2 AND guild_id = $1 DO UPDATE SET list=$3")
+            .bind(guild_id)
             .bind(user_id)
             .bind(serde_json::to_string(&current_list).unwrap())
             .fetch_all(pool)
@@ -107,9 +120,10 @@ pub(crate) async fn add_watchlist(pool: &PgPool, user_id: i64, list: Vec<&str>) 
     Ok(format!("{}", "Added 1 row"))
 }
 
-pub(crate) async fn get_watchlist(pool: &PgPool, user_id: i64) -> Vec<String> {
+pub(crate) async fn get_watchlist(pool: &PgPool, guild_id: i64, user_id: i64) -> Vec<String> {
     let table: Vec<Watchlist> =
-        sqlx::query_as("SELECT * FROM watchlist WHERE user_id = $1")
+        sqlx::query_as("SELECT * FROM watchlist WHERE guild_id = $1 AND user_id = $2")
+            .bind(guild_id)
             .bind(user_id)
             .fetch_all(pool)
             .await.unwrap();
@@ -117,9 +131,10 @@ pub(crate) async fn get_watchlist(pool: &PgPool, user_id: i64) -> Vec<String> {
     return if table.get(0).is_some() {serde_json::from_str(table.get(0).unwrap().list.as_str()).expect("Couldn't deserialize recipients") } else {Vec::<String>::new()};
 }
 
-pub(crate) async fn clear_watchlist(pool: &PgPool, user_id: i64) -> Result<String, sqlx::Error> {
+pub(crate) async fn clear_watchlist(pool: &PgPool, guild_id: i64, user_id: i64) -> Result<String, sqlx::Error> {
     let _table: Vec<Rank> =
-        sqlx::query_as("DELETE FROM watchlist WHERE user_id = $1")
+        sqlx::query_as("DELETE FROM watchlist WHERE guild_id = $1 AND user_id = $2")
+            .bind(guild_id)
             .bind(user_id)
             .fetch_all(pool)
             .await?;
@@ -127,8 +142,8 @@ pub(crate) async fn clear_watchlist(pool: &PgPool, user_id: i64) -> Result<Strin
     Ok(format!("{}", "Removed 1 row"))
 }
 
-pub(crate) async fn show_watchlist(pool: &PgPool, iex_api_key: &String, user_id: i64) -> Result<String, sqlx::Error> {
-    let table: Vec<String> = get_watchlist(pool, user_id).await;
+pub(crate) async fn show_watchlist(pool: &PgPool, iex_api_key: &String, guild_id: i64, user_id: i64) -> Result<String, sqlx::Error> {
+    let table: Vec<String> = get_watchlist(pool, guild_id, user_id).await;
     if table.len() == 0 {
         return Ok(format!("❌ Your watchlist is empty!\n Use `/watchlist add <symbol>` to add one"));
     } else {
@@ -141,10 +156,10 @@ pub(crate) async fn show_watchlist(pool: &PgPool, iex_api_key: &String, user_id:
     }
 }
 
-pub(crate) async fn list_watchlist(pool: &PgPool) -> Result<String, sqlx::Error> {
+pub(crate) async fn list_watchlist(pool: &PgPool, guild_id: i64) -> Result<String, sqlx::Error> {
     let table: Vec<Watchlist> =
-        sqlx::query_as("SELECT * FROM watchlist")
-            //.bind(user_id)
+        sqlx::query_as("SELECT * FROM watchlist WHERE guild_id = $1")
+            .bind(guild_id)
             .fetch_all(pool)
             .await?;
 
@@ -156,9 +171,10 @@ pub(crate) async fn list_watchlist(pool: &PgPool) -> Result<String, sqlx::Error>
     Ok(response)
 }
 
-pub(crate) async fn create_comp(pool: &PgPool, name: String, start: i64, end: i64) -> Result<String, sqlx::Error> {
+pub(crate) async fn create_comp(pool: &PgPool, guild_id: i64, name: String, start: i64, end: i64) -> Result<String, sqlx::Error> {
     let _table =
-        sqlx::query("INSERT INTO competitions (active, reg_open, start_date, end_date, name) VALUES ($1, $2, $3, $4, $5)")
+        sqlx::query("INSERT INTO competitions (guild_id, active, reg_open, start_date, end_date, name) VALUES ($1, $2, $3, $4, $5, $6)")
+            .bind(guild_id)
             .bind(true)
             .bind(true)
             .bind(start)
@@ -170,14 +186,15 @@ pub(crate) async fn create_comp(pool: &PgPool, name: String, start: i64, end: i6
     Ok(format!("{}", "Competition created".to_string()))
 }
 
-pub(crate) async fn list_comp(pool: &PgPool, user_id: i64) -> Result<String, sqlx::Error> {
+pub(crate) async fn list_comp(pool: &PgPool, guild_id: i64, user_id: i64) -> Result<String, sqlx::Error> {
     let table: Vec<Competitions> =
-        sqlx::query_as("SELECT * FROM competitions WHERE active = true")
+        sqlx::query_as("SELECT * FROM competitions WHERE guild_id = $1 AND active = true")
+            .bind(guild_id)
             .fetch_all(pool)
             .await?;
     let mut response = if table.len() >= 1 {format!("🏁 Current running competitions: {}\n(to register, take the `id` and run the `/comp register <id> <stock_list>`)\n", table.len())} else {format!("❌ No active competitions\n")};
     for (_, line) in table.iter().enumerate() {
-        let is_participant = is_registered(pool, user_id, line.id.into()).await;
+        let is_participant = is_registered(pool, guild_id, user_id, line.id.into()).await;
         let participant_string = if is_participant {format!("You are registered! ✅ ")} else {format!("")};
         let reg_status = if line.reg_open {format!("Open")} else {format!("Closed")};
         writeln!(&mut response, "ID: {}\tName: {}\tRegistration: {}\t{}", line.id, line.name, reg_status, participant_string).unwrap();
@@ -185,19 +202,20 @@ pub(crate) async fn list_comp(pool: &PgPool, user_id: i64) -> Result<String, sql
     Ok(response)
 }
 
-pub(crate) async fn register_comp(pool: &PgPool, user_id: i64, comp_id: i64, list: Vec<&str>, iex_api_key: String) -> Result<String, sqlx::Error> {
-    print!("adding {} to comp {} for user {}\n", format!("{:?}", list), comp_id, user_id);
-    let valudate_comp_id = sqlx::query("SELECT * FROM competitions WHERE id = $1 AND active = true")
+pub(crate) async fn register_comp(pool: &PgPool, guild_id: i64, user_id: i64, comp_id: i64, list: Vec<&str>, iex_api_key: String) -> Result<String, sqlx::Error> {
+    print!("adding {} to comp {} for user {} in guild {}\n", format!("{:?}", list), comp_id, user_id, guild_id);
+    let valudate_comp_id = sqlx::query("SELECT * FROM competitions WHERE guild_id = $1 AND id = $2 AND active = true")
+        .bind(guild_id)
         .bind(comp_id)
         .fetch_all(pool)
         .await.unwrap();
     if valudate_comp_id.len() == 0 {
         return Ok(format!("❌ Invalid competition ID"));
     }
-    if get_registration_status(pool, comp_id).await.unwrap() == false {
+    if get_registration_status(pool, guild_id, comp_id).await.unwrap() == false {
         return Ok(format!("❌ Registration is closed for this competition"));
     }
-    let mut current_list: Vec<String> = get_comp_with_user(pool, user_id, comp_id).await;
+    let mut current_list: Vec<String> = get_comp_with_user(pool, guild_id, user_id, comp_id).await;
     if current_list.len() > 0 {
         return Ok(format!("❌ You are already registered for this competition!"));
     }
@@ -213,7 +231,8 @@ pub(crate) async fn register_comp(pool: &PgPool, user_id: i64, comp_id: i64, lis
     }
 
     let _table: Vec<Competitions> =
-        sqlx::query_as("INSERT INTO complist (user_id, comp_id, list) VALUES ($1, $2, $3)")
+        sqlx::query_as("INSERT INTO complist (guild_id, user_id, comp_id, list) VALUES ($1, $2, $3, $4)")
+            .bind(guild_id)
             .bind(user_id)
             .bind(comp_id)
             .bind(serde_json::to_string(&current_list).unwrap())
@@ -223,7 +242,7 @@ pub(crate) async fn register_comp(pool: &PgPool, user_id: i64, comp_id: i64, lis
     Ok(format!("✅ Registered for competition {} with list {}", comp_id, format!("{:?}\n\nGood Luck!", current_list)))
 }
 
-pub(crate) async fn is_valid_comp(pool: &PgPool, comp_id: i64) -> Result<bool, sqlx::Error> {
+pub(crate) async fn is_valid_comp(pool: &PgPool, guild_id: i64, comp_id: i64) -> Result<bool, sqlx::Error> {
     let valudate_comp_id = sqlx::query("SELECT * FROM competitions WHERE id = $1 AND active = true")
         .bind(comp_id)
         .fetch_all(pool)
@@ -234,7 +253,7 @@ pub(crate) async fn is_valid_comp(pool: &PgPool, comp_id: i64) -> Result<bool, s
     Ok(true)
 }
 
-pub(crate) async fn get_comp_with_user(pool: &PgPool, user_id: i64, comp_id: i64) -> Vec<String> {
+pub(crate) async fn get_comp_with_user(pool: &PgPool, guild_id: i64, user_id: i64, comp_id: i64) -> Vec<String> {
     let table: Vec<CompList> =
         sqlx::query_as("SELECT * FROM complist WHERE user_id = $1 AND comp_id = $2")
             .bind(user_id)
@@ -249,7 +268,7 @@ pub(crate) async fn get_comp_with_user(pool: &PgPool, user_id: i64, comp_id: i64
     };
 }
 
-pub(crate) async fn get_competition_by_id(pool: &PgPool, comp_id: i64) -> Vec<Competitions> {
+pub(crate) async fn get_competition_by_id(pool: &PgPool, guild_id: i64, comp_id: i64) -> Vec<Competitions> {
     let table: Vec<Competitions> =
         sqlx::query_as("SELECT * FROM competitions WHERE id = $1")
             .bind(comp_id)
@@ -258,7 +277,7 @@ pub(crate) async fn get_competition_by_id(pool: &PgPool, comp_id: i64) -> Vec<Co
     return table;
 }
 
-pub(crate) async fn show_comp_metadata(pool: &PgPool, comp_id: i64) -> Result<String, sqlx::Error> {
+pub(crate) async fn show_comp_metadata(pool: &PgPool, guild_id: i64, comp_id: i64) -> Result<String, sqlx::Error> {
     let table: Vec<Competitions> =
         sqlx::query_as("SELECT * FROM competitions WHERE id = $1")
             .bind(comp_id)
@@ -275,7 +294,7 @@ pub(crate) async fn show_comp_metadata(pool: &PgPool, comp_id: i64) -> Result<St
     Ok(response)
 }
 
-pub (crate) async fn is_registered(pool: &PgPool, user_id: i64, comp_id: i64) -> bool {
+pub (crate) async fn is_registered(pool: &PgPool, guild_id: i64, user_id: i64, comp_id: i64) -> bool {
     let table: Vec<CompList> =
         sqlx::query_as("SELECT * FROM complist WHERE user_id = $1 AND comp_id = $2")
             .bind(user_id)
@@ -286,8 +305,8 @@ pub (crate) async fn is_registered(pool: &PgPool, user_id: i64, comp_id: i64) ->
     return table.len() > 0;
 }
 
-pub (crate) async fn edit_registration(pool: &PgPool, user_id: i64, comp_id: i64, list: Vec<&str>, iex_api_key: String) -> Result<String, sqlx::Error> {
-    let mut current_list: Vec<String> = get_comp_with_user(pool, user_id, comp_id).await;
+pub (crate) async fn edit_registration(pool: &PgPool, guild_id: i64, user_id: i64, comp_id: i64, list: Vec<&str>, iex_api_key: String) -> Result<String, sqlx::Error> {
+    let mut current_list: Vec<String> = get_comp_with_user(pool, guild_id, user_id, comp_id).await;
     if current_list.len() == 0 {
         return Ok(format!("❌ You are not registered for this competition!"));
     }
@@ -313,23 +332,25 @@ pub (crate) async fn edit_registration(pool: &PgPool, user_id: i64, comp_id: i64
     Ok(format!("✅ Updated registration for competition {} with list {}", comp_id, format!("{:?}\n\nGood Luck!", current_list)))
 }
 
-pub(crate) async fn get_all_comps(pool: &PgPool) -> Vec<Competitions> {
+pub(crate) async fn get_all_comps(pool: &PgPool, guild_id: i64) -> Vec<Competitions> {
     let table: Vec<Competitions> =
-        sqlx::query_as("SELECT * FROM competitions WHERE active = true")
+        sqlx::query_as("SELECT * FROM competitions WHERE active = true AND guild_id = $1")
+            .bind(guild_id)
             .fetch_all(pool)
             .await.unwrap();
 
     return table;
 }
 
-pub(crate) async fn set_registration_status(pool: &PgPool, comp_id: i64, status: bool) -> Result<String, sqlx::Error> {
-    let comp_valid = is_valid_comp(pool, comp_id);
+pub(crate) async fn set_registration_status(pool: &PgPool, guild_id: i64, comp_id: i64, status: bool) -> Result<String, sqlx::Error> {
+    let comp_valid = is_valid_comp(pool, guild_id, comp_id);
     if !comp_valid.await.unwrap() {
         return Ok(format!("❌ Invalid competition ID"));
     }
     let _table: Vec<Competitions> =
-        sqlx::query_as("UPDATE competitions SET reg_open = $1 WHERE id = $2")
+        sqlx::query_as("UPDATE competitions SET reg_open = $1 WHERE guild_id = $2 AND id = $3")
             .bind(status)
+            .bind(guild_id)
             .bind(comp_id)
             .fetch_all(pool)
             .await?;
@@ -337,13 +358,14 @@ pub(crate) async fn set_registration_status(pool: &PgPool, comp_id: i64, status:
     Ok(format!("✅ Updated registration status for competition {}", comp_id))
 }
 
-pub(crate) async fn get_registration_status(pool: &PgPool, comp_id: i64) -> Result<bool, sqlx::Error> {
-    let comp_valid = is_valid_comp(pool, comp_id);
+pub(crate) async fn get_registration_status(pool: &PgPool, guild_id: i64, comp_id: i64) -> Result<bool, sqlx::Error> {
+    let comp_valid = is_valid_comp(pool, guild_id, comp_id);
     if !comp_valid.await.unwrap() {
         return Ok(false);
     }
     let table: Vec<Competitions> =
-        sqlx::query_as("SELECT * FROM competitions WHERE id = $1")
+        sqlx::query_as("SELECT * FROM competitions WHERE guild_id = $1 AND id = $2")
+            .bind(guild_id)
             .bind(comp_id)
             .fetch_all(pool)
             .await.unwrap();

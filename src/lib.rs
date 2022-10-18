@@ -113,7 +113,7 @@ async fn init(
         .await
         .expect("Err creating client");
     
-    scheduler::start_scheduler(serenity.cache_and_http.http.clone(), pool1);
+    scheduler::start_scheduler(serenity.cache_and_http.http.clone(), pool1, discord_guild_id.parse().unwrap(), 1024479108983422986);
 
     Ok(
         BotService{
@@ -143,7 +143,7 @@ impl EventHandler for Handler {
         let message_xp = 3;
         let channel_id = msg.channel_id;
         if !msg.author.bot {
-            let level_up = db::increment_level(&self.database, msg.author.id.to_string().parse::<i64>().unwrap(), msg.author.name, msg.timestamp.unix_timestamp(), message_xp).await;
+            let level_up = db::increment_level(&self.database, msg.guild_id.unwrap().0 as i64, msg.author.id.to_string().parse::<i64>().unwrap(), msg.author.name, msg.timestamp.unix_timestamp(), message_xp).await;
             if level_up.1 {
                 channel_id.send_message(&_ctx.http, 
                     |m| {
@@ -160,6 +160,7 @@ impl EventHandler for Handler {
         if let Interaction::ApplicationCommand(command) = interaction {
             //let invoking_user = &interaction.application_command().unwrap().member.unwrap().user
             let invoking_user = &command.member.as_ref().unwrap().user;
+            let guild_id = command.guild_id.unwrap().0 as i64;
             println!("Received command interaction: {:#?}", command.data.name);
 
             let content = match command.data.name.as_str() {
@@ -177,16 +178,16 @@ impl EventHandler for Handler {
                             {
                                 ticker = _ticker.split(",").collect::<Vec<&str>>();
                             }
-                            db::add_watchlist(&self.database, invoking_user.id.to_string().parse::<i64>().unwrap(), ticker).await.unwrap()
+                            db::add_watchlist(&self.database, guild_id, invoking_user.id.to_string().parse::<i64>().unwrap(), ticker).await.unwrap()
                         },
-                        "list" => db::list_watchlist(&self.database).await.unwrap(),
+                        "list" => db::list_watchlist(&self.database, guild_id).await.unwrap(),
                         "clear" => {
                             let user_id: i64 = invoking_user.id.to_string().parse::<i64>().unwrap();
-                            db::clear_watchlist(&self.database, user_id).await.unwrap()
+                            db::clear_watchlist(&self.database, guild_id, user_id).await.unwrap()
                         },
                         "show" => {
                             let user_id: i64 = invoking_user.id.to_string().parse::<i64>().unwrap();
-                            db::show_watchlist(&self.database, &self.iex_api_key, user_id).await.unwrap()
+                            db::show_watchlist(&self.database, &self.iex_api_key, guild_id, user_id).await.unwrap()
                         },
                         _ => "Please enter a watchlist command".to_string(),
                     }
@@ -212,9 +213,9 @@ impl EventHandler for Handler {
                             {
                                 end_date = start_date + Duration::days(*_length);
                             }
-                            db::create_comp(&self.database, name, start_date.timestamp(), end_date.timestamp()).await.unwrap()
+                            db::create_comp(&self.database, guild_id, name, start_date.timestamp(), end_date.timestamp()).await.unwrap()
                         },
-                        "list" => db::list_comp(&self.database, invoking_user.id.to_string().parse::<i64>().unwrap()).await.unwrap(),
+                        "list" => db::list_comp(&self.database, guild_id, invoking_user.id.to_string().parse::<i64>().unwrap()).await.unwrap(),
                         "register" => {
                             let mut comp_id: i64 = 0;
                             let mut tickers: Vec<&str> = Vec::new();
@@ -232,7 +233,7 @@ impl EventHandler for Handler {
                             {
                                 tickers = _ticker.split(",").collect::<Vec<&str>>();
                             }
-                            db::register_comp(&self.database, invoking_user.id.to_string().parse::<i64>().unwrap(), comp_id, tickers, self.iex_api_key.to_string()).await.unwrap()
+                            db::register_comp(&self.database, guild_id, invoking_user.id.to_string().parse::<i64>().unwrap(), comp_id, tickers, self.iex_api_key.to_string()).await.unwrap()
                         },
                         // "show" => {
                         //     let mut comp_id: i64 = 0;
@@ -263,9 +264,9 @@ impl EventHandler for Handler {
                                 {
                                     reg = *_reg;
                                 }
-                                db::set_registration_status(&self.database, comp_id, reg).await.unwrap();
+                                db::set_registration_status(&self.database, guild_id, comp_id, reg).await.unwrap();
                             }
-                            db::show_comp_metadata(&self.database, comp_id).await.unwrap()
+                            db::show_comp_metadata(&self.database, guild_id, comp_id).await.unwrap()
                         }
                         _ => "Please enter a comp command".to_string(),
                     }
@@ -293,14 +294,14 @@ impl EventHandler for Handler {
                                     }
                                 }
                             }
-                            let current = db::get_count_and_level(&self.database, user_id).await;
+                            let current = db::get_count_and_level(&self.database, guild_id, user_id).await;
                             let next_cost = commands::rank::level_cost(current.1 as f64);
-                            let watchlist = db::get_watchlist(&self.database, user_id).await;
+                            let watchlist = db::get_watchlist(&self.database, guild_id, user_id).await;
                             let watchlist_count = watchlist.len();
                             format!("{} is level {} with {} xp.\nNext level at {} xp.{}", user_name, current.1, current.0, next_cost, "\nWatchlist count: ".to_owned() + &watchlist_count.to_string())
                         },
                         "list" => {
-                            db::list_rank(&self.database).await.unwrap()
+                            db::list_rank(&self.database, guild_id).await.unwrap()
                         },
                         "promote" => {
                             let mut user_id: i64 = 0;
@@ -326,9 +327,9 @@ impl EventHandler for Handler {
                             {
                                 value = _value.clone().round() as i64;
                             }
-                            let current = db::get_count_and_level(&self.database, user_id).await;
+                            let current = db::get_count_and_level(&self.database, guild_id, user_id).await;
                             let new_level = commands::rank::calculate_level(current.0 + value, current.1);
-                            db::update_level(&self.database, user_id, user_name, current.0 + value, new_level.0).await.unwrap()
+                            db::update_level(&self.database, guild_id, user_id, user_name, current.0 + value, new_level.0).await.unwrap()
                         },
                         _ => "Please enter a valid todo".to_string(),
                     }
