@@ -18,19 +18,19 @@
             <div class="hero">
                 <div class="parallax-wrap">
                 <span value="-15">
-                    <img src="/static/img/shape1.png" />
+                    <img src="../static/img/shape1.png" />
                 </span>
                 <span value="15">
-                    <img src="static/img/shape2.png" />
+                    <img src="../static/img/shape2.png" />
                 </span>
                 <span value="20">
-                    <img src="static/img/shape3.png" />
+                    <img src="../static/img/shape3.png" />
                 </span>
                 <span value="5">
-                    <img src="static/img/shape4.png" />
+                    <img src="../static/img/shape4.png" />
                 </span>
                 <span value="-5">
-                    <img src="static/img/shape5.png" />
+                    <img src="../static/img/shape5.png" />
                 </span>
                 <img src="~/assets/logo.png" alt="Fankbot Logo" />
                 <h2>a discord bot..</h2>
