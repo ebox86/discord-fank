@@ -1,5 +1,5 @@
 [package]
-name = "discord-fankbot"
+name = "discord-fank"
 description = "a discord bot for financial trading servers"
 version = "0.2.0"
 edition = "2021"
