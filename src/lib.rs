@@ -13,6 +13,7 @@ use log::info;
 use serenity::model::application::interaction::{Interaction, InteractionResponseType};
 use serenity::model::gateway::Ready;
 use serenity::model::channel::Message;
+use serenity::model::prelude::command::Command;
 use serenity::model::prelude::interaction::application_command::CommandDataOptionValue;
 use serenity::prelude::*;
 use serenity::{async_trait, model::prelude::GuildId};
@@ -123,11 +124,21 @@ async fn init(
     )
 }
 
+
+
 #[async_trait]
 impl EventHandler for Handler {
     async fn ready(&self, ctx: Context, ready: Ready) {
         info!("{} is connected!", ready.user.name);
 
+        // registers global commands
+        // Command::create_global_application_command(&ctx.http, |c| commands::ping::register(c)).await.unwrap();
+        // Command::create_global_application_command(&ctx.http, |c| commands::rank::register(c)).await.unwrap();
+        // Command::create_global_application_command(&ctx.http, |c| commands::fun::register(c)).await.unwrap();
+        // Command::create_global_application_command(&ctx.http, |c| commands::watchlist::register(c)).await.unwrap();
+        // Command::create_global_application_command(&ctx.http, |c| commands::comp::register(c)).await.unwrap();
+        
+        // registers guild commands
         let _commands = GuildId::set_application_commands(&self.discord_guild_id, &ctx.http, |commands| {
             commands
                 .create_application_command(|command| commands::ping::register(command))
@@ -137,6 +148,7 @@ impl EventHandler for Handler {
                 .create_application_command(|command| commands::comp::register(command))
         })
         .await;
+    
     }
 
     async fn message(&self, _ctx: Context, msg: Message) {

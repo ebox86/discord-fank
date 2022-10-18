@@ -27,7 +27,6 @@ export default {
         align-items: center;
         margin-bottom: 1rem;
         padding-bottom: 1rem;
-        border-bottom: 5px solid rgb(255, 0, 0);
         background-color: #000;
         color: #fff;
         padding: 10px;
