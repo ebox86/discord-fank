@@ -8,9 +8,11 @@
     "postinstall": "nuxt prepare"
   },
   "devDependencies": {
+    "@nuxt/image": "^0.7.1",
     "nuxt": "3.0.0-rc.11"
   },
   "dependencies": {
+    "@nuxt/image-edge": "^1.0.0-27768165.4b0219a",
     "@popperjs/core": "^2.11.6",
     "@vuestic/nuxt": "^1.0.6"
   }

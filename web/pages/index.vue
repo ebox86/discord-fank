@@ -16,11 +16,28 @@
         </header>
         <div class="content-wrap">
             <div class="hero">
+                <div class="parallax-wrap">
+                <span value="-15">
+                    <img src="/static/img/shape1.png" />
+                </span>
+                <span value="15">
+                    <img src="static/img/shape2.png" />
+                </span>
+                <span value="20">
+                    <img src="static/img/shape3.png" />
+                </span>
+                <span value="5">
+                    <img src="static/img/shape4.png" />
+                </span>
+                <span value="-5">
+                    <img src="static/img/shape5.png" />
+                </span>
                 <img src="~/assets/logo.png" alt="Fankbot Logo" />
-                <h1>a discord bot..</h1>
+                <h2>a discord bot..</h2>
                 <h3>..for apes, by apes</h3>
                 <br/>
                 <va-button class="mr-4 mb-2" disabled color="#9f03e0">Add to Discord</va-button>
+                </div>
             </div>
         </div>
         <div class="section">
@@ -66,54 +83,66 @@
 </template>
 
 <script>
-export default {}
+export default {
+  mounted() {
+    document.addEventListener('mousemove', parallax)
+    function parallax(event) {
+  this.querySelectorAll(".parallax-wrap span").forEach((shift) => {
+    const position = shift.getAttribute("value");
+    const x = (window.innerWidth - event.pageX * position) / 90;
+    const y = (window.innerHeight - event.pageY * position) / 90;
+
+    shift.style.transform = `translateX(${x}px) translateY(${y}px)`;
+  });
+}
+}
+}
 </script>
 
 <style>
+    .vcard {
+        padding: 0.5rem;
+    }
+    .section {
+        margin-bottom: 50px;
+        background: hsla(0,0%,100%,.4);
+        padding: 40px 80px;
+        border: 3px solid rgba(0,0,0,.1);
+        border-left: 0;
+        border-right: 0;
+    }
+    .hero {
+        font-size: 26px;
+        line-height: 1.4;
+        font-family: "Veggy";
+        font-weight: 300;
+        box-sizing: border-box;
+        text-align: center;
 
-.vcard {
-    padding: 1rem;
-}
-.section {
-    margin-bottom: 50px;
-    background: hsla(0,0%,100%,.4);
-    padding: 40px 80px;
-    border: 3px solid rgba(0,0,0,.1);
-    border-left: 0;
-    border-right: 0;
-}
-.hero {
-    font-size: 26px;
-    line-height: 1.4;
-    font-family: "Veggy";
-    font-weight: 300;
-    box-sizing: border-box;
-    text-align: center;
-    padding: 40px 0;
-    background: rgb(0, 0, 0);
-    background-size: 16px 16px;
-    background-color: black;
-    color: rgb(255, 255, 255);
-}
-.feature-list {
-    display: -webkit-box;
-    display: -ms-flexbox;
-    display: flex;
-    -ms-flex-wrap: wrap;
-    flex-wrap: wrap;
-}
+        background: rgb(0, 0, 0);
+        background-size: 16px 16px;
+        background-color: black;
+        color: rgb(255, 255, 255);
+    }
+    .feature-list {
+        display: -webkit-box;
+        display: -ms-flexbox;
+        display: flex;
+        -ms-flex-wrap: wrap;
+        flex-wrap: wrap;
+        padding-bottom: 2rem;
+    }
 
-.content-wrap {
-    line-height: 1.4;
-    color: #555;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-          Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
-    font-weight: 300;
-    box-sizing: border-box;
-    -webkit-box-flex: 1;
-    flex: 1;
-    position: relative;
-}
+    .content-wrap {
+        line-height: 1.4;
+        color: #555;
+        font-family: "Veggy";
+        font-weight: 300;
+        box-sizing: border-box;
+        -webkit-box-flex: 1;
+        flex: 1;
+        position: relative;
+    }
     .header {
         display: flex;
         justify-content: space-between;
@@ -148,5 +177,46 @@ export default {}
         display: inline-block;
         padding: 0.6rem 1rem;
         margin-right: 0.5rem;
+    }
+
+
+    .parallax-wrap {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    }
+
+    .parallax-wrap span {
+    position: absolute;
+    }
+    .parallax-wrap span:nth-child(1) {
+    top: 50%;
+    left: 50%;
+    z-index: 3;
+    }
+    .parallax-wrap span:nth-child(2) {
+    top: 70%;
+    left: 30%;
+    z-index: 3;
+    }
+    .parallax-wrap span:nth-child(3) {
+    top: 25%;
+    left: 30%;
+    z-index: 3;
+    }
+    .parallax-wrap span:nth-child(4) {
+    top: 20%;
+    left: 60%;
+    z-index: 3;
+    }
+    .parallax-wrap span:nth-child(5) {
+    top: 10%;
+    left: 40%;
+    z-index: 3;
     }
 </style>

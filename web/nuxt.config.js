@@ -42,7 +42,10 @@ export default defineNuxtConfig({
   // Global CSS: https://go.nuxtjs.dev/config-css
   css: [
     "@/layouts/global.css",
-],
+],  
+  image: {
+    // Options
+  },
 
   // Plugins to run before rendering page: https://go.nuxtjs.dev/config-plugins
   plugins: [],
@@ -55,7 +58,7 @@ export default defineNuxtConfig({
 
   // Modules: https://go.nuxtjs.dev/config-modules
   modules: [
-    '@vuestic/nuxt'
-
+    '@vuestic/nuxt',
+    '@nuxt/image-edge',
   ],
 })
