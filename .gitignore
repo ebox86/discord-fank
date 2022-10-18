@@ -7,5 +7,4 @@
 .DS_Store
 /Cargo.lock
 /target
-Secrets.toml
 .vscode
