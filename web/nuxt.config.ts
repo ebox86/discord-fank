@@ -4,22 +4,31 @@ export default defineNuxtConfig({
   target: 'static',
 
   // Global page headers: https://go.nuxtjs.dev/config-head
-  head: {
-    title: 'Fank: A Discord Bot',
-    htmlAttrs: {
-      lang: 'en',
-    },
-    meta: [
-      { charset: 'utf-8' },
-      { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { hid: 'description', name: 'description', content: '' },
-      { name: 'format-detection', content: 'telephone=no' },
-
-      { hid: 'description', name: 'description', content:  'Fankbot homepage' },
-      { hid: 'og:title', property: 'og:title', content: 'Fank: A Discord Bot' },
-      { hid: 'og:url', property: 'og:url', content: 'https://fankbot.xyz' },
-      { hid: 'og:description', property: 'og:description', content: 'Fankbot homepage' },
-      { hid: 'og:image', property: 'og:image', content: "https://fankbot.xyz/_nuxt/logo.1282014f.png"},
+  app: {
+    head: {
+      charset: 'utf-8',
+      viewport: 'width=device-width, initial-scale=1',
+      title: 'Fank: A Discord Bot',
+      meta: [
+        { 
+          name: 'description', 
+          content:  'Fankbot homepage' 
+        },
+        { 
+          name: 'og:title', 
+          content: 'Fank: A Discord Bot' 
+        },
+        { 
+          name: 'og:url', 
+          content: 'https://fankbot.xyz' },
+        { 
+          property: 'og:description', 
+          content: 'Fankbot homepage' 
+        },
+        { 
+          property: 'og:image', 
+          content: "https://fankbot.xyz/_nuxt/logo.1282014f.png"
+        },
       
       // twitter card
       // { hid: "twitter:title", name: "twitter:title", content: this.pageTitle },
@@ -27,8 +36,8 @@ export default defineNuxtConfig({
       // { hid: 'twitter:description', name: 'twitter:description', content: this.description },
       // { hid: "twitter:image", name: "twitter:image", content: process.env.baseUrl + ogImage},
     ],
-    link: [{ rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }],
   },
+},
 
   // Global CSS: https://go.nuxtjs.dev/config-css
   css: [
