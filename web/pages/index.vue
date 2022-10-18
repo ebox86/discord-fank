@@ -17,19 +17,19 @@
         <div class="content-wrap">
             <div class="hero">
                 <div class="parallax-wrap">
-                <span value="-15">
+                <span value="-35">
                     <img src="../static/img/shape1.png" />
                 </span>
-                <span value="15">
+                <span value="60">
                     <img src="../static/img/shape2.png" />
                 </span>
-                <span value="20">
+                <span value="15">
                     <img src="../static/img/shape3.png" />
                 </span>
-                <span value="5">
+                <span value="7">
                     <img src="../static/img/shape4.png" />
                 </span>
-                <span value="-5">
+                <span value="-16">
                     <img src="../static/img/shape5.png" />
                 </span>
                 <img src="~/assets/logo.png" alt="Fankbot Logo" />
@@ -196,7 +196,7 @@ export default {
     }
     .parallax-wrap span:nth-child(1) {
     top: 50%;
-    left: 50%;
+    left: 55%;
     z-index: 3;
     }
     .parallax-wrap span:nth-child(2) {
@@ -205,8 +205,8 @@ export default {
     z-index: 3;
     }
     .parallax-wrap span:nth-child(3) {
-    top: 25%;
-    left: 30%;
+    top: 20%;
+    left: 15%;
     z-index: 3;
     }
     .parallax-wrap span:nth-child(4) {
