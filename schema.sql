@@ -1,4 +1,4 @@
-DROP TABLE IF EXISTS rank, watchlist, competitions, complist;
+--DROP TABLE IF EXISTS rank, watchlist, competitions, complist;
 
 CREATE TABLE IF NOT EXISTS rank (
   id serial PRIMARY KEY,

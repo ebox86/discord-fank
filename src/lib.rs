@@ -27,7 +27,7 @@ use serde::{Deserialize, Serialize};
 use rocket::http::Header;
 use rocket::{Request, Response};
 use rocket::fairing::{Fairing, Info, Kind};
-
+use shuttle_service::ResourceBuilder;
 
 struct Handler {
     iex_api_key: String,
