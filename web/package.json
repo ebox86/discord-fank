@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@nuxt/image-edge": "^1.0.0-27768165.4b0219a",
+    "@nuxtjs/device": "Redemption198/device-module",
     "@popperjs/core": "^2.11.6",
     "@vuestic/nuxt": "^1.0.6"
   }

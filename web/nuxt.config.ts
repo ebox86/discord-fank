@@ -60,5 +60,6 @@ export default defineNuxtConfig({
   modules: [
     '@vuestic/nuxt',
     '@nuxt/image-edge',
+    '@nuxtjs/device',
   ],
 })

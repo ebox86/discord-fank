@@ -17,19 +17,19 @@
         <div class="content-wrap">
             <div class="hero">
                 <div class="parallax-wrap">
-                <span value="-35">
+                <span value="-5">
                     <img src="../static/img/shape1.png" />
                 </span>
-                <span value="60">
+                <span value="5">
                     <img src="../static/img/shape2.png" />
                 </span>
-                <span value="15">
+                <span value="-12">
                     <img src="../static/img/shape3.png" />
                 </span>
                 <span value="7">
                     <img src="../static/img/shape4.png" />
                 </span>
-                <span value="-16">
+                <span value="-26">
                     <img src="../static/img/shape5.png" />
                 </span>
                 <img src="~/assets/logo.png" alt="Fankbot Logo" />
@@ -83,8 +83,9 @@
 </template>
 
 <script>
-export default {
+export default  {
   mounted() {
+    if(this.$device.isDesktop)
     document.addEventListener('mousemove', parallax)
     function parallax(event) {
   this.querySelectorAll(".parallax-wrap span").forEach((shift) => {
@@ -101,7 +102,7 @@ export default {
 
 <style>
     .vcard {
-        padding: 0.5rem;
+        padding: 0.25rem;
     }
     .section {
         margin-bottom: 50px;
@@ -183,7 +184,7 @@ export default {
     .parallax-wrap {
     position: relative;
     width: 100%;
-    height: 100vh;
+    height: 500px;
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -195,28 +196,28 @@ export default {
     position: absolute;
     }
     .parallax-wrap span:nth-child(1) {
-    top: 50%;
+    top: 60%;
     left: 55%;
     z-index: 3;
     }
     .parallax-wrap span:nth-child(2) {
-    top: 70%;
-    left: 30%;
+    top: 75%;
+    left: 5%;
     z-index: 3;
     }
     .parallax-wrap span:nth-child(3) {
-    top: 20%;
-    left: 15%;
+    top: -5%;
+    left: 10%;
     z-index: 3;
     }
     .parallax-wrap span:nth-child(4) {
     top: 20%;
-    left: 60%;
+    left: 75%;
     z-index: 3;
     }
     .parallax-wrap span:nth-child(5) {
-    top: 10%;
-    left: 40%;
+    top: -10%;
+    left: 50%;
     z-index: 3;
     }
 </style>
