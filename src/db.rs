@@ -16,6 +16,16 @@ pub struct Rank {
     pub points: i64,
     pub level: i64
 }
+
+#[derive(Serialize, FromRow)]
+pub struct GuildRank {
+    pub user_id: i64,
+    pub user_name: String,
+    pub last_msg: i64,
+    pub points: i64,
+    pub level: i64
+}
+
 #[derive(FromRow)]
 struct Watchlist {
     pub guild_id: i64,
@@ -102,12 +112,21 @@ pub(crate) async fn list_rank(pool: &PgPool, guild_id: i64) -> Result<String, sq
     Ok(response)
 }
 
-pub(crate) async fn add_watchlist(pool: &PgPool, guild_id: i64, user_id: i64, list: Vec<&str>) -> Result<String, sqlx::Error> {
+pub(crate) async fn add_watchlist(pool: &PgPool, iex_api_key: &String, guild_id: i64, user_id: i64, list: Vec<&str>) -> Result<String, sqlx::Error> {
     print!("adding {} to watchlist for user {} in guild {}\n", format!("{:?}", list), user_id, guild_id);
     let mut current_list: Vec<String> = get_watchlist(pool, guild_id, user_id).await;
     print!("current list: {:?}\n", current_list);
     for s in &list {
         current_list.push(s.trim().to_string().to_uppercase());
+    }
+    if current_list.len() > 10 {
+        return Ok(format!("Watchlist is limited to 10 symbols. You have {} symbols in your watchlist.", current_list.len()));
+    }
+    for symbol in &current_list {
+        let quote = services::stocks::get_quote(iex_api_key.to_string(), symbol.to_string()).await;
+        if quote.0 == 0.0 {
+            return Ok(format!("❌ {} is not a valid stock symbol", symbol));
+        }
     }
     let _table: Vec<Watchlist> =
         sqlx::query_as("INSERT INTO watchlist (guild_id, user_id, list) VALUES ($1, $2, $3) ON CONFLICT (guild_id, user_id) WHERE guild_id = $1 AND user_id = $2 AND guild_id = $1 DO UPDATE SET list=$3")

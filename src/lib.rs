@@ -10,9 +10,11 @@ extern crate rocket;
 use anyhow::Context as _;
 use chrono::{Utc, Duration};
 use log::info;
+use serenity::http::CacheHttp;
 use serenity::model::application::interaction::{Interaction, InteractionResponseType};
 use serenity::model::gateway::Ready;
 use serenity::model::channel::Message;
+use serenity::model::prelude::application_command::ApplicationCommand;
 use serenity::model::prelude::command::Command;
 use serenity::model::prelude::interaction::application_command::CommandDataOptionValue;
 use serenity::prelude::*;
@@ -78,7 +80,7 @@ impl shuttle_service::Service for BotService {
             _ = self.serenity.start() => Ok(()),
             _ = rocket::build()
             .mount("/hello", routes![routes::test::world])
-            .mount("/rank", routes![routes::rank::show])
+            .mount("/rank", routes![routes::rank::show, routes::rank::show_by_guild])
             .attach(CORS)
             .manage(self.database)
             .configure(config)
@@ -202,7 +204,7 @@ impl EventHandler for Handler {
                             {
                                 ticker = _ticker.split(",").collect::<Vec<&str>>();
                             }
-                            db::add_watchlist(&self.database, guild_id, invoking_user.id.to_string().parse::<i64>().unwrap(), ticker).await.unwrap()
+                            db::add_watchlist(&self.database, &self.iex_api_key, guild_id, invoking_user.id.to_string().parse::<i64>().unwrap(), ticker).await.unwrap()
                         },
                         "list" => db::list_watchlist(&self.database, guild_id).await.unwrap(),
                         "clear" => {
