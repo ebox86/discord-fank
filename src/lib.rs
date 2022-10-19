@@ -62,7 +62,18 @@ impl Fairing for CORS {
 
 #[shuttle_service::async_trait]
 impl shuttle_service::Service for BotService {
-    async fn bind( mut self: Box<Self>,  _addr: std::net::SocketAddr) -> Result<(), shuttle_service::Error> {
+    async fn bind( mut self: Box<Self>,  addr: std::net::SocketAddr) -> Result<(), shuttle_service::Error> {
+        let shutdown = rocket::config::Shutdown {
+            ctrlc: false,
+            ..rocket::config::Shutdown::default()
+        };
+
+        let config = rocket::Config::figment()
+            .clone()
+            .merge((rocket::Config::ADDRESS, addr.ip()))
+            .merge((rocket::Config::PORT, addr.port()))
+            .merge((rocket::Config::LOG_LEVEL, rocket::config::LogLevel::Off))
+            .merge((rocket::Config::SHUTDOWN, shutdown));
         tokio::select! {
             _ = self.serenity.start() => Ok(()),
             _ = rocket::build()
@@ -70,6 +81,7 @@ impl shuttle_service::Service for BotService {
             .mount("/rank", routes![routes::rank::show])
             .attach(CORS)
             .manage(self.database)
+            .configure(config)
             .launch() => Ok(())
         }
     }
