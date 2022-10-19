@@ -55,6 +55,11 @@ export default defineNuxtConfig({
 
   // Modules for dev and build (recommended): https://go.nuxtjs.dev/config-modules
   buildModules: [],
+  runtimeConfig: {
+    public: {
+      BASE_URL: 'https://discord-fank.shuttleapp.rs/',
+    },
+  },
 
   // Modules: https://go.nuxtjs.dev/config-modules
   modules: [

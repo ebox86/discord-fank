@@ -27,7 +27,7 @@ export default {
             }
         }
         try {
-            const response = await useFetch("http://127.0.0.1:8000/rank/show")
+            const response = await useFetch("https://discord-fank.shuttleapp.rs/rank/show")
             this.ranks = response.data;
         } catch (error) {
             console.log(error)
