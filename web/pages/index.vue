@@ -108,7 +108,7 @@ export default  {
         margin-bottom: 50px;
         background: hsla(0,0%,100%,.4);
         padding: 40px 80px;
-        border: 3px solid rgba(0,0,0,.1);
+        border: 10px solid rgba(0,0,0,.1);
         border-left: 0;
         border-right: 0;
     }

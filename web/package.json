@@ -15,6 +15,9 @@
     "@nuxt/image-edge": "^1.0.0-27768165.4b0219a",
     "@nuxtjs/device": "Redemption198/device-module",
     "@popperjs/core": "^2.11.6",
-    "@vuestic/nuxt": "^1.0.6"
+    "@vuestic/nuxt": "^1.0.6",
+    "autoprefixer": "^10.4.12",
+    "postcss": "^8.4.18",
+    "tailwindcss": "^3.1.8"
   }
 }

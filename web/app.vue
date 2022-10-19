@@ -4,8 +4,8 @@
     </div>
 </template>
 
-<script>
-
+<script lang="ts">
+import './assets/css/tailwind.css'
 </script>
 <style>
 </style>
