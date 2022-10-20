@@ -187,11 +187,13 @@ impl EventHandler for Handler {
             //let invoking_user = &interaction.application_command().unwrap().member.unwrap().user
             let invoking_user = &command.member.as_ref().unwrap().user;
             let guild_id = command.guild_id.unwrap().0 as i64;
+            let http = &ctx.http;
+            let channel_id = command.channel_id.0;
             println!("Received command interaction: {:#?}", command.data.name);
 
             let content = match command.data.name.as_str() {
                 "ping" => commands::ping::run(&command.data.options),
-                "fun" => commands::fun::run(&command.data.options),
+                "fun" => commands::fun::run(&command.data.options, http, channel_id).await,
                 "watchlist" => {
                     let command = command.data.options.get(0).expect("Expected a command");
                     match command.name.as_str() {

@@ -1,21 +1,21 @@
+use std::sync::Arc;
+
 use serenity::builder::CreateApplicationCommand;
-use serenity::model::prelude::command::CommandOptionType;
+use serenity::http::Http;
+use serenity::model::prelude::Embed;
+use serenity::model::prelude::command::{CommandOptionType, self};
 use serenity::model::prelude::interaction::application_command::{
     CommandDataOption, CommandDataOptionValue
 };
 
-pub fn run(options: &[CommandDataOption]) -> String {
-    let option = options
-    .get(0)
-    .expect("Expected string option")
-    .resolved
-    .as_ref()
-    .expect("Expected string object");
-
-    if let CommandDataOptionValue::String(question) = option {
-        format!("**{}**: \n> doubtful (currently the only value, will fix soon)", question.to_string())
-    } else {
-        "Please provide a valid user".to_string()
+pub async fn run(options: &[CommandDataOption], client: &Arc<Http>, channel_id: u64) -> String {
+    let command = options.get(0).unwrap();
+    match command.name.as_str() {
+        "8ball" => {
+            //let _ = client.send_message(channel_id, &embed).await;
+            "Outcome unlikely!".to_string()
+        },
+        _ => "Please enter a watchlist command".to_string(),
     }
 }
 
@@ -27,8 +27,17 @@ pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicatio
         |option| {
             option
                 .name("8ball")
-                .description("The question you wish to ask")
+                .description("Ask the 8ball a question")
                 .kind(CommandOptionType::SubCommand)
+                .create_sub_option(
+                    |option| {
+                        option
+                            .name("question")
+                            .description("The question you wish to ask")
+                            .kind(CommandOptionType::String)
+                            .required(true)
+                    }
+                )
         },
     )
 }
