@@ -45,9 +45,9 @@ export const useDiscordGuilds = async () => {
 
 export const discordLogin = () => {
   if (process.client) {
-    const { DISCORD_CLIENT_ID } = useRuntimeConfig()
+    const { DISCORD_CLIENT_ID, REDIRECT_URI } = useRuntimeConfig()
     window.location.replace(
-      `https://discord.com/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fapi%2Fdiscord%2Fcallback&response_type=code&scope=identify%20guilds`
+      `https://discord.com/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}api%2Fdiscord%2Fcallback&response_type=code&scope=identify%20guilds`
     )
   }
 }
