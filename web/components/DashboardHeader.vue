@@ -1,6 +1,13 @@
 <template>
     <va-navbar color="black" text-color="#cdcdcd">
         <template #left>
+            <va-navbar-item>        
+                <div>
+                    <nuxt-link to="/">
+                        <img class="logo" src="~/assets/logo.png" alt="Fankbot Logo" />
+                    </nuxt-link>
+                </div>
+            </va-navbar-item>
         </template>
         <template #right>
             <Auth />
@@ -10,7 +17,7 @@
 
 <script>
 export default {
-  name: 'AppHeader',
+  name: 'DashboardHeader',
 }
 </script>
 
@@ -33,4 +40,9 @@ export default {
         padding: 0.6rem 1rem;
         margin-right: 0.5rem;
     }
-    </style>
+    .logo {
+    height: auto; 
+    width: auto;
+    max-width: 100px; 
+    }
+</style>

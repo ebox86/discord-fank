@@ -1,19 +1,23 @@
+<script>
+
+export default  {
+  mounted() {
+    if(this.$device.isDesktop)
+    document.addEventListener('mousemove', parallax)
+    function parallax(event) {
+        this.querySelectorAll(".parallax-wrap span").forEach((shift) => {
+            const position = shift.getAttribute("value");
+            const x = (window.innerWidth - event.pageX * position) / 90;
+            const y = (window.innerHeight - event.pageY * position) / 90;
+
+            shift.style.transform = `translateX(${x}px) translateY(${y}px)`;
+            });
+        }
+    }
+}
+</script>
 <template>
-    <div>
-        <header class="header">
-            <div />
-            <ul>
-                <li>
-                    <nuxt-link to="/">Home</nuxt-link>
-                </li>
-                <va-popover
-                    message="Login not working yet :keku:"
-                    color="#9f03e0"
-                >
-                    <va-button color="#9f03e0">Login</va-button>
-                </va-popover>
-            </ul>
-        </header>
+    <NuxtLayout>
         <div class="content-wrap">
             <div class="hero">
                 <div class="parallax-wrap">
@@ -44,61 +48,49 @@
             <div class="feature-list">
                 <div class="row">
                     <div class="flex md6 lg4 vcard">
-                    <va-card color="#9f03e0" gradient>
+                    <va-card color="#9f03e0" gradient stripe stripe-color="success">
                         <va-card-title>Watchlists</va-card-title>
                         <va-card-content>Keep track of and show off custom watchlists with buildin data from IEX Cloud.</va-card-content>
                     </va-card>
                     </div>
                     <div class="flex md6 lg4 vcard">
-                    <va-card color="#9f03e0" gradient>
+                    <va-card color="#9f03e0" gradient stripe stripe-color="success">
                         <va-card-title>Rank System</va-card-title>
                         <va-card-content>Fank keeps track of member rank based on several different server activities.</va-card-content>
                     </va-card>
                     </div>
                     <div class="flex md6 lg4 vcard">
-                    <va-card color="#9f03e0" gradient >
+                    <va-card color="#9f03e0" gradient stripe stripe-color="success">
                         <va-card-title>Competitions</va-card-title>
                         <va-card-content>Define and run competitions from within Fank. Let members register and fank takes care of the rest.</va-card-content>
                     </va-card>
                     </div>
                     <div class="flex md6 lg4 vcard">
-                    <va-card color="#9f03e0" gradient >
-                        <va-card-title>Voice Callouts</va-card-title>
+                    <va-card color="#9f03e0" gradient stripe stripe-color="success" disabled>
+                        <va-card-title>Voice Callouts (coming soon)</va-card-title>
                         <va-card-content>Configure levels and pivots and let Fank call them out in one of your VC channels.</va-card-content>
                     </va-card>
                     </div>
                 </div>
             </div>
-            <div>
-                <h2>What is Fankbot?</h2>
-            </div>
-            <div>
-                <p>
-                    Fankbot is a discord bot that is made for apes, by apes. It is a community driven project that is open source and free to use. It is currently in development and will be released soon.
-                </p>
+            <div class="sub-section">
+                <div class="icon">
+                    <va-icon name="help" color="black" size="large" />
+                </div>
+                <div class="sub1">
+                    <div>
+                        <h2 class="text-xl">What is Fankbot?</h2>
+                    </div>
+                    <div>
+                        <p>
+                            Fankbot is a discord bot that is made for apes, by apes. It is a community driven project that is open source and free to use. It is currently in development and will be released soon.
+                        </p>
+                    </div>
+                </div>
             </div>
         </div>
-
-    </div>
+    </NuxtLayout>
 </template>
-
-<script>
-export default  {
-  mounted() {
-    if(this.$device.isDesktop)
-    document.addEventListener('mousemove', parallax)
-    function parallax(event) {
-  this.querySelectorAll(".parallax-wrap span").forEach((shift) => {
-    const position = shift.getAttribute("value");
-    const x = (window.innerWidth - event.pageX * position) / 90;
-    const y = (window.innerHeight - event.pageY * position) / 90;
-
-    shift.style.transform = `translateX(${x}px) translateY(${y}px)`;
-  });
-}
-}
-}
-</script>
 
 <style>
     .vcard {
@@ -132,6 +124,23 @@ export default  {
         -ms-flex-wrap: wrap;
         flex-wrap: wrap;
         padding-bottom: 2rem;
+
+    }
+
+    .sub-section {
+        flex-direction: row;
+        display: flex;
+        padding-bottom: 2rem;
+    }
+    .icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+    }
+    .sub1 {
+        display: flex;
+        flex-direction: column;
     }
 
     .content-wrap {
@@ -144,80 +153,43 @@ export default  {
         flex: 1;
         position: relative;
     }
-    .header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-
-        /* border-bottom: 5px solid rgb(255, 0, 0); */
-        background-color: #000;
-        color: #fff;
-        padding: 10px;
-    }
-
-    .header .title {
-        font-size: 3rem;
-        font-weight: bold;
-    }
-
-    .header ul {
-        display: flex;
-        list-style: none;
-        margin: 0;
-        padding: 0;
-        padding-right: 5rem;
-    }
-    .h1 {
-    font-family: "Veggy";
-    letter-spacing: 1px;
-    word-spacing: 3px;
-    }
-
-    .header a {
-        color: #ccc;
-        display: inline-block;
-        padding: 0.6rem 1rem;
-        margin-right: 0.5rem;
-    }
-
-
     .parallax-wrap {
-    position: relative;
-    width: 100%;
-    height: 500px;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
+        position: relative;
+        width: 100%;
+        height: 500px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
     }
 
     .parallax-wrap span {
-    position: absolute;
+        position: absolute;
     }
     .parallax-wrap span:nth-child(1) {
-    top: 60%;
-    left: 55%;
-    z-index: 3;
+        top: 60%;
+        left: 55%;
+        z-index: 3;
     }
     .parallax-wrap span:nth-child(2) {
-    top: 75%;
-    left: 5%;
-    z-index: 3;
+        top: 75%;
+        left: 5%;
+        z-index: 3;
     }
     .parallax-wrap span:nth-child(3) {
-    top: -5%;
-    left: 10%;
-    z-index: 3;
+        top: -5%;
+        left: 10%;
+        z-index: 3;
     }
     .parallax-wrap span:nth-child(4) {
-    top: 20%;
-    left: 75%;
-    z-index: 3;
+        top: 20%;
+        left: 75%;
+        z-index: 3;
     }
     .parallax-wrap span:nth-child(5) {
-    top: -10%;
-    left: 50%;
-    z-index: 3;
+        top: -10%;
+        left: 50%;
+        z-index: 3;
     }
 </style>

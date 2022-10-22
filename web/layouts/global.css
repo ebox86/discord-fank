@@ -1,9 +1,0 @@
-@font-face {
-    font-family: "Veggy";
-    src: local("Veggy"),
-     url(../assets/fonts/Veggy.ttf) format("truetype");
-}
-
-html {
-    font-family: "Veggy";
-}

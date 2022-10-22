@@ -41,7 +41,8 @@ export default defineNuxtConfig({
 
   // Global CSS: https://go.nuxtjs.dev/config-css
   css: [
-    "@/layouts/global.css",
+    "@/assets/css/global.css",
+    "@/assets/css/tailwind.css",
 ],  
   image: {
     // Options
@@ -55,10 +56,11 @@ export default defineNuxtConfig({
 
   // Modules for dev and build (recommended): https://go.nuxtjs.dev/config-modules
   buildModules: [],
-  runtimeConfig: {
-    public: {
-      BASE_URL: 'https://discord-fank.shuttleapp.rs/',
-    },
+  publicRuntimeConfig: {
+    DISCORD_CLIENT_ID: process.env.DISCORD_CLIENT_ID,
+    DISCORD_CLIENT_SECRET: process.env.DISCORD_CLIENT_SECRET,
+    REDIRECT_URI: process.env.REDIRECT_URI,
+    BOT_URL: process.env.BOT_URL,
   },
 
   // Modules: https://go.nuxtjs.dev/config-modules
@@ -66,5 +68,12 @@ export default defineNuxtConfig({
     '@vuestic/nuxt',
     '@nuxt/image-edge',
     '@nuxtjs/device',
+    '@nuxtjs/tailwindcss'
   ],
+  fontawesome: {
+    icons: {
+      solid: true,
+      brands: true
+    }
+  },
 })

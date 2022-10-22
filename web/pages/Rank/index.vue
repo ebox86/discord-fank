@@ -18,6 +18,9 @@
 <script>
 import Rank from "../../components/Rank.vue"
 
+definePageMeta({
+  layout: "dashboard",
+});
 export default {
     components: {
         Rank
@@ -37,13 +40,14 @@ export default {
         }
     },
     async created(){
+        const { BOT_URL } = useRuntimeConfig()
         const config = {
             headers: {
                 Accept: "application/json",
             }
         }
         try {
-            const response = await useFetch(`https://discord-fank.shuttleapp.rs/rank/show/${this.value}`)
+            const response = await useFetch(`${BOT_URL}rank/show/${this.value}`)
             this.ranks = response.data;
         } catch (error) {
             console.log(error)
