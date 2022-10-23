@@ -1,8 +1,11 @@
-use serenity::builder::CreateApplicationCommand;
+
+
+use serenity::builder::{CreateApplicationCommand, CreateMessage};
+use serenity::model::prelude::{Message, ChannelId};
 use serenity::model::prelude::interaction::application_command::CommandDataOption;
 
-pub fn run(_options: &[CommandDataOption]) -> String {
-    "Hey, I'm alive!".to_string()
+pub async fn run(_options: &[CommandDataOption]) -> String {
+    return "Pong!".to_string();
 }
 
 pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand {

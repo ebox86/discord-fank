@@ -3,6 +3,7 @@ mod db;
 mod services;
 mod routes;
 mod scheduler;
+mod util;
 
 #[macro_use]
 extern crate rocket;
@@ -10,6 +11,7 @@ extern crate rocket;
 use anyhow::Context as _;
 use chrono::{Utc, Duration};
 use log::info;
+use serenity::builder::CreateMessage;
 use serenity::http::CacheHttp;
 use serenity::model::application::interaction::{Interaction, InteractionResponseType};
 use serenity::model::gateway::Ready;
@@ -167,17 +169,21 @@ impl EventHandler for Handler {
 
     async fn message(&self, _ctx: Context, msg: Message) {
         let message_xp = 3;
-        let channel_id = msg.channel_id;
+        //let channel_id = msg.channel_id;
         if !msg.author.bot {
             let level_up = db::increment_level(&self.database, msg.guild_id.unwrap().0 as i64, msg.author.id.to_string().parse::<i64>().unwrap(), msg.author.name, msg.timestamp.unix_timestamp(), message_xp).await;
             if level_up.1 {
-                channel_id.send_message(&_ctx.http, 
-                    |m| {
-                        m.content(
-                            format!(
-                                "Welcome to level {}!\nNext level at {} xp.", 
-                                level_up.0, 
-                                commands::rank::level_cost(level_up.0 as f64)))}).await.unwrap();
+                let mut lvl_up_msg = CreateMessage::default();
+                lvl_up_msg.embed(|embed| embed
+                            .title(format!("Level up! Welcome to level {}", level_up.0))
+                            .color(0x00FF00)
+                            .image("https://i.imgur.com/qgpcufH.gif")
+                            .field("Next Level:", format!("{} points",  commands::rank::level_cost(level_up.0 as f64)), true)
+                ).content(format!("<@{}>", msg.author.id));
+                // bot testing channel
+                //util::send_message(&_ctx.http, 1024479108983422986, lvl_up_msg).await.unwrap();
+                // real channel
+                util::send_message(&_ctx.http, 1015709479179923516, lvl_up_msg).await.unwrap();
             }
         }
     }
@@ -191,12 +197,12 @@ impl EventHandler for Handler {
             let channel_id = command.channel_id.0;
             println!("Received command interaction: {:#?}", command.data.name);
 
-            let content = match command.data.name.as_str() {
-                "ping" => commands::ping::run(&command.data.options),
-                "fun" => commands::fun::run(&command.data.options, http, channel_id).await,
+            let content = match command.data.name.as_ref() {
+                "ping" => commands::ping::run(&command.data.options).await,
+                "fun" => commands::fun::run(&command.data.options).await,
                 "watchlist" => {
                     let command = command.data.options.get(0).expect("Expected a command");
-                    match command.name.as_str() {
+                    match command.name.as_ref() {
                         "add" => {
                             let mut ticker: Vec<&str> = Vec::new();
                             if let CommandDataOptionValue::String (_ticker) = command.options[0]

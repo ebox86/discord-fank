@@ -6,7 +6,7 @@ use chrono_tz::US::Eastern;
 use serenity::http::Http;
 use sqlx::PgPool;
 use crate::db;
-
+use clokwerk::Interval::*;
 pub(crate) fn start_scheduler(serenity: Arc<serenity::http::Http>, pool: PgPool, guild_id: i64, channel_id: i64) {
     let mut async_scheduler = AsyncScheduler::with_tz(Eastern);
     //let mut scheduler = Scheduler::with_tz(Eastern);
@@ -18,15 +18,15 @@ pub(crate) fn start_scheduler(serenity: Arc<serenity::http::Http>, pool: PgPool,
     //         .at("9:30 am")
     //     .run(|| println!("Market Open! 🔔"));
     async_scheduler
-        .every(1.day())
+        .every(Weekday)
             .at("9:30 am")
         .run(move || send_message(serenity.to_owned(), channel_id, "Market Open! 🔔".to_string()));
     async_scheduler
-        .every(1.day())
+        .every(Weekday)
             .at("9:30 am")
         .run(move || current_competition_job(serenity2.to_owned(), guild_id, channel_id, pool.to_owned()));
     async_scheduler
-        .every(1.day())
+        .every(Weekday)
             .at("4:00 pm")
         .run(move || send_message(serenity1.to_owned(), channel_id, "Market Closed! 🔔".to_string()));
     //scheduler.every(1.day()).at("4:00 pm").run(|| println!("Market Closed! 🔔"));

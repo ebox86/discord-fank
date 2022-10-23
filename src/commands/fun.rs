@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use serenity::builder::CreateApplicationCommand;
+use serenity::builder::{CreateApplicationCommand, CreateEmbed};
 use serenity::http::Http;
 use serenity::model::prelude::Embed;
 use serenity::model::prelude::command::{CommandOptionType, self};
@@ -8,7 +8,7 @@ use serenity::model::prelude::interaction::application_command::{
     CommandDataOption, CommandDataOptionValue
 };
 
-pub async fn run(options: &[CommandDataOption], client: &Arc<Http>, channel_id: u64) -> String {
+pub async fn run(options: &[CommandDataOption]) -> String {
     let command = options.get(0).unwrap();
     match command.name.as_str() {
         "8ball" => {
