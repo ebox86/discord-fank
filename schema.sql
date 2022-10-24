@@ -37,5 +37,5 @@ CREATE TABLE IF NOT EXISTS competitions (
   end_date BIGINT NOT NULL,
   name TEXT NOT NULL,
   winner BIGINT NULL,
-  UNIQUE (guild_id, name)
+  UNIQUE (guild_id, id)
 );

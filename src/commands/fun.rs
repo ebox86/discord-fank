@@ -8,14 +8,16 @@ use serenity::model::prelude::interaction::application_command::{
     CommandDataOption, CommandDataOptionValue
 };
 
-pub async fn run(options: &[CommandDataOption]) -> String {
+use super::CommandResult;
+
+pub async fn run(options: &[CommandDataOption]) -> CommandResult {
     let command = options.get(0).unwrap();
     match command.name.as_str() {
         "8ball" => {
             //let _ = client.send_message(channel_id, &embed).await;
-            "Outcome unlikely!".to_string()
+            return CommandResult::Content("Outcome unlikely!".to_string())
         },
-        _ => "Please enter a watchlist command".to_string(),
+        _ => CommandResult::Content("Please enter a watchlist command".to_string()),
     }
 }
 

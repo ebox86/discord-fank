@@ -11,7 +11,7 @@ extern crate rocket;
 use anyhow::Context as _;
 use chrono::{Utc, Duration};
 use log::info;
-use serenity::builder::CreateMessage;
+use serenity::builder::{CreateMessage, CreateInteractionResponseData, CreateEmbed};
 use serenity::http::CacheHttp;
 use serenity::model::application::interaction::{Interaction, InteractionResponseType};
 use serenity::model::gateway::Ready;
@@ -33,6 +33,8 @@ use rocket::http::Header;
 use rocket::{Request, Response};
 use rocket::fairing::{Fairing, Info, Kind};
 use shuttle_service::ResourceBuilder;
+
+use crate::commands::CommandResult;
 
 struct Handler {
     iex_api_key: String,
@@ -130,7 +132,7 @@ async fn init(
         .await
         .expect("Err creating client");
     
-    scheduler::start_scheduler(serenity.cache_and_http.http.clone(), pool1, discord_guild_id.parse().unwrap(), 1024479108983422986);
+    scheduler::start_scheduler(serenity.cache_and_http.http.clone(), pool1, discord_guild_id.parse().unwrap(), 698169764861837375);
 
     Ok(
         BotService{
@@ -139,8 +141,6 @@ async fn init(
         }
     )
 }
-
-
 
 #[async_trait]
 impl EventHandler for Handler {
@@ -197,7 +197,7 @@ impl EventHandler for Handler {
             let channel_id = command.channel_id.0;
             println!("Received command interaction: {:#?}", command.data.name);
 
-            let content = match command.data.name.as_ref() {
+            let content: CommandResult = match command.data.name.as_str() {
                 "ping" => commands::ping::run(&command.data.options).await,
                 "fun" => commands::fun::run(&command.data.options).await,
                 "watchlist" => {
@@ -212,18 +212,18 @@ impl EventHandler for Handler {
                             {
                                 ticker = _ticker.split(",").collect::<Vec<&str>>();
                             }
-                            db::add_watchlist(&self.database, &self.iex_api_key, guild_id, invoking_user.id.to_string().parse::<i64>().unwrap(), ticker).await.unwrap()
+                            CommandResult::Content(db::add_watchlist(&self.database, &self.iex_api_key, guild_id, invoking_user.id.to_string().parse::<i64>().unwrap(), ticker).await.unwrap())
                         },
-                        "list" => db::list_watchlist(&self.database, guild_id).await.unwrap(),
+                        "list" => CommandResult::Content(db::list_watchlist(&self.database, guild_id).await.unwrap()),
                         "clear" => {
                             let user_id: i64 = invoking_user.id.to_string().parse::<i64>().unwrap();
-                            db::clear_watchlist(&self.database, guild_id, user_id).await.unwrap()
+                            CommandResult::Content(db::clear_watchlist(&self.database, guild_id, user_id).await.unwrap())
                         },
                         "show" => {
                             let user_id: i64 = invoking_user.id.to_string().parse::<i64>().unwrap();
-                            db::show_watchlist(&self.database, &self.iex_api_key, guild_id, user_id).await.unwrap()
+                            CommandResult::Content(db::show_watchlist(&self.database, &self.iex_api_key, guild_id, user_id).await.unwrap())
                         },
-                        _ => "Please enter a watchlist command".to_string(),
+                        _ => CommandResult::Content("Please enter a watchlist command".to_string()),
                     }
                 },
                 "comp" => {
@@ -247,9 +247,9 @@ impl EventHandler for Handler {
                             {
                                 end_date = start_date + Duration::days(*_length);
                             }
-                            db::create_comp(&self.database, guild_id, name, start_date.timestamp(), end_date.timestamp()).await.unwrap()
+                            CommandResult::Content(db::create_comp(&self.database, guild_id, name, start_date.timestamp(), end_date.timestamp()).await.unwrap())
                         },
-                        "list" => db::list_comp(&self.database, guild_id, invoking_user.id.to_string().parse::<i64>().unwrap()).await.unwrap(),
+                        "list" => commands::CommandResult::Content(db::list_comp(&self.database, guild_id, invoking_user.id.to_string().parse::<i64>().unwrap()).await.unwrap()),
                         "register" => {
                             let mut comp_id: i64 = 0;
                             let mut tickers: Vec<&str> = Vec::new();
@@ -267,7 +267,7 @@ impl EventHandler for Handler {
                             {
                                 tickers = _ticker.split(",").collect::<Vec<&str>>();
                             }
-                            db::register_comp(&self.database, guild_id, invoking_user.id.to_string().parse::<i64>().unwrap(), comp_id, tickers, self.iex_api_key.to_string()).await.unwrap()
+                            CommandResult::Content(db::register_comp(&self.database, guild_id, invoking_user.id.to_string().parse::<i64>().unwrap(), comp_id, tickers, self.iex_api_key.to_string()).await.unwrap())
                         },
                         // "show" => {
                         //     let mut comp_id: i64 = 0;
@@ -300,9 +300,9 @@ impl EventHandler for Handler {
                                 }
                                 db::set_registration_status(&self.database, guild_id, comp_id, reg).await.unwrap();
                             }
-                            db::show_comp_metadata(&self.database, guild_id, comp_id).await.unwrap()
+                            CommandResult::Content(db::show_comp_metadata(&self.database, guild_id, comp_id).await.unwrap())
                         }
-                        _ => "Please enter a comp command".to_string(),
+                        _ => CommandResult::Content("Please enter a comp command".to_string()),
                     }
                 },
                 "rank" => {
@@ -332,10 +332,10 @@ impl EventHandler for Handler {
                             let next_cost = commands::rank::level_cost(current.1 as f64);
                             let watchlist = db::get_watchlist(&self.database, guild_id, user_id).await;
                             let watchlist_count = watchlist.len();
-                            format!("{} is level {} with {} xp.\nNext level at {} xp.{}", user_name, current.1, current.0, next_cost, "\nWatchlist count: ".to_owned() + &watchlist_count.to_string())
+                            CommandResult::Content(format!("{} is level {} with {} xp.\nNext level at {} xp.{}", user_name, current.1, current.0, next_cost, "\nWatchlist count: ".to_owned() + &watchlist_count.to_string()))
                         },
                         "list" => {
-                            db::list_rank(&self.database, guild_id).await.unwrap()
+                            CommandResult::Content(db::list_rank(&self.database, guild_id).await.unwrap())
                         },
                         "promote" => {
                             let mut user_id: i64 = 0;
@@ -363,19 +363,22 @@ impl EventHandler for Handler {
                             }
                             let current = db::get_count_and_level(&self.database, guild_id, user_id).await;
                             let new_level = commands::rank::calculate_level(current.0 + value, current.1);
-                            db::update_level(&self.database, guild_id, user_id, user_name, current.0 + value, new_level.0).await.unwrap()
+                            CommandResult::Content(db::update_level(&self.database, guild_id, user_id, user_name, current.0 + value, new_level.0).await.unwrap())
                         },
-                        _ => "Please enter a valid todo".to_string(),
+                        _ => CommandResult::Content("Please enter a valid todo".to_string()),
                     }
                 }
-                _ => "not implemented :(".to_string(),
+                _ => CommandResult::Content("test".to_string()),
             };
 
             if let Err(why) = command
                 .create_interaction_response(&ctx.http, |response| {
                     response
                         .kind(InteractionResponseType::ChannelMessageWithSource)
-                        .interaction_response_data(|message| message.content(content))
+                        .interaction_response_data(|message| match content {
+                            CommandResult::Content(content) => message.content(content),
+                            CommandResult::Embed(embed) => message.add_embed(embed),
+                          })
                 })
                 .await
             {
