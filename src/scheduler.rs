@@ -3,6 +3,7 @@ use std::{fmt::Write};
 use chrono_tz::America::Guadeloupe;
 use clokwerk::{Scheduler, TimeUnits, AsyncScheduler, Job};
 use chrono_tz::US::Eastern;
+use sea_orm::DatabaseConnection;
 use serenity::http::Http;
 use sqlx::PgPool;
 use crate::db;

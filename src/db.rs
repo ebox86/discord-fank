@@ -1,3 +1,5 @@
+use crate::database::*;
+
 use serenity::model::guild;
 use sqlx::{FromRow, PgPool};
 use std::{fmt::Write};
@@ -6,56 +8,18 @@ use chrono::prelude::*;
 use crate::{commands::rank, services::{self, stocks::price_diff_formatter}};
 use serde::{Deserialize, Serialize};
 
+// pub struct Connection {
+//     pub pool: PgPool,
+// }
 
-#[derive(Serialize, FromRow)]
-pub struct Rank {
-    pub guild_id: i64,
-    pub user_id: i64,
-    pub user_name: String,
-    pub last_msg: i64,
-    pub points: i64,
-    pub level: i64
-}
-
-#[derive(Serialize, FromRow)]
-pub struct GuildRank {
-    pub user_id: i64,
-    pub user_name: String,
-    pub last_msg: i64,
-    pub points: i64,
-    pub level: i64
-}
-
-#[derive(FromRow)]
-struct Watchlist {
-    pub guild_id: i64,
-    pub user_id: i64,
-    pub list: String
-}
-
-#[derive(FromRow)]
-struct CompList {
-    pub guild_id: i64,
-    pub user_id: i64,
-    pub list: String,
-    pub comp_id: i64
-}
-
-#[derive(FromRow)]
-pub struct Competitions {
-    pub guild_id: i64,
-    pub id: i32,
-    pub active: bool,
-    pub reg_open: bool,
-    pub name: String,
-    pub start_date: i64,
-    pub end_date: i64
-}
+// pub fn new(pool: PgPool) {
+//     let conn = Connection { pool };
+// }
 
 pub(crate) async fn update_level(pool: &PgPool, guild_id: i64, user_id: i64, user_name: String, points: i64, level: i64) -> Result<String, sqlx::Error> {
-    print!("updating user with new points: {} and level: {}\n", points, level);
+    print!("updating user with new xp: {} and level: {}\n", points, level);
     let _table: Vec<Rank> =
-        sqlx::query_as("INSERT INTO rank (guild_id, user_id, user_name, last_msg, points, level) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (guild_id, user_id) WHERE guild_id = $1 AND user_id = $2 DO UPDATE SET points=$5, level=$6")
+        sqlx::query_as("INSERT INTO rank (guild_id, user_id, user_name, last_msg, xp, level) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (guild_id, user_id) WHERE guild_id = $1 AND user_id = $2 DO UPDATE SET xp=$5, level=$6")
             .bind(guild_id)
             .bind(user_id)
             .bind(user_name)
@@ -74,22 +38,58 @@ pub(crate) async fn get_count_and_level(pool: &PgPool, guild_id: i64, user_id: i
             .bind(guild_id)
             .bind(user_id)
             .fetch_all(pool)
-            .await.unwrap();
-    return if table.get(0).is_some(){(table.get(0).unwrap().points, table.get(0).unwrap().level)} else {(0, 0)};
+            .await.unwrap_or_default();
+    return if table.get(0).is_some(){(table.get(0).unwrap().xp, table.get(0).unwrap().level)} else {(0, 0)};
 }
 
-pub(crate) async fn increment_level(pool: &PgPool, guild_id: i64, user_id: i64, user_name: String, last_msg: i64, points: i64) -> (i64,bool) {
-    print!("incrementing level for user: {} in guild: {}\n", user_id, guild_id);
-    let count_and_level = get_count_and_level(pool, guild_id, user_id).await;
-    let level = rank::calculate_level(count_and_level.0, count_and_level.1);
-    print!("guild_id: {}, user_id: {}, user_name: {}, last_msg: {}, points: {}, level: {}\n", guild_id, user_id, user_name, last_msg, points, level.0);
-    let _insert = sqlx::query("INSERT INTO rank (guild_id, user_id, user_name, last_msg, points, level) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (guild_id, user_id) WHERE guild_id = $1 AND user_id = $2 DO UPDATE SET last_msg=$4, points=rank.points + $5, level=$6")
-        .bind(guild_id)
+pub(crate) async fn get_rank(pool: &PgPool, guild_id: i64, user_id: i64) -> Vec<Rank> {
+    let table: Vec<Rank> =
+        sqlx::query_as("SELECT * FROM rank WHERE guild_id = $1 AND user_id = $2")
+            .bind(guild_id)
+            .bind(user_id)
+            .fetch_all(pool)
+            .await.unwrap_or_default();
+    return if table.get(0).is_some(){table} else {vec![Rank{guild_id: 0, user_id: 0, xp: 0, level: 0, rank: 0}]};
+}
+
+pub(crate) async fn add_user(pool: &PgPool, user_id: i64, user_name: String) {
+    let _ = sqlx::query("INSERT INTO account (id, name) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING")
         .bind(user_id)
         .bind(user_name)
-        .bind(last_msg)
+        .fetch_all(pool)
+        .await;
+}
+
+pub(crate) async fn add_guild(pool: &PgPool, guild_id: i64, guild_name: String) {
+    print!("adding guild: {} id: {}\n", guild_name, guild_id);
+    let _ = sqlx::query("INSERT INTO guild (id, name) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING")
+        .bind(guild_id)
+        .bind(guild_name)
+        .fetch_all(pool)
+        .await;
+}
+
+pub(crate) async fn add_message(pool: &PgPool, guild_id: i64, channel_id: i64, user_id: i64, timestamp: i64) {
+    let _ = sqlx::query("INSERT INTO message (guild_id, channel_id, user_id, timestamp) VALUES ($1, $2, $3, $4)")
+        .bind(guild_id)
+        .bind(channel_id)
+        .bind(user_id)
+        .bind(timestamp)
+        .fetch_all(pool)
+        .await;
+}
+
+pub(crate) async fn increment_level(pool: &PgPool, guild_id: i64, user_id: i64, points: i64) -> (i64,bool) {
+    print!("incrementing level for user: {} in guild: {}\n", user_id, guild_id);
+    //let count_and_level = get_count_and_level(pool, guild_id, user_id).await;
+    let current_rank = get_rank(pool, guild_id, user_id).await;
+    let level = rank::calculate_level(current_rank.get(0).unwrap().xp, current_rank.get(0).unwrap().level);
+    let _insert = sqlx::query("INSERT INTO rank (guild_id, user_id, xp, level, rank) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (guild_id, user_id) WHERE guild_id = $1 AND user_id = $2 DO UPDATE SET xp=rank.xp + $3, level=$4, rank=$5")
+        .bind(guild_id)
+        .bind(user_id)
         .bind(points)
         .bind(level.0)
+        .bind(0)
         .execute(pool)
         .await;
 
@@ -99,14 +99,14 @@ pub(crate) async fn increment_level(pool: &PgPool, guild_id: i64, user_id: i64, 
 
 pub(crate) async fn list_rank(pool: &PgPool, guild_id: i64) -> Result<String, sqlx::Error> {
     let table: Vec<Rank> =
-        sqlx::query_as("SELECT * FROM rank WHERE guild_id=$1 ORDER BY points DESC")
+        sqlx::query_as("SELECT * FROM rank WHERE guild_id=$1 ORDER BY xp DESC")
             .bind(guild_id)
             .fetch_all(pool)
             .await?;
 
     let mut response = format!("Current table is size {}:\n", table.len());
     for (i, line) in table.iter().enumerate() {
-        writeln!(&mut response, "{}. userid: {} points: {} last_msg: {} level: {}", i + 1, line.user_id, line.points, line.last_msg, line.level).unwrap();
+        writeln!(&mut response, "{}. userid: {} points: {} level: {}", i + 1, line.user_id, line.xp, line.level).unwrap();
     }
 
     Ok(response)

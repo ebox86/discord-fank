@@ -4,12 +4,14 @@ mod services;
 mod routes;
 mod scheduler;
 mod util;
+mod database;
 
 #[macro_use]
 extern crate rocket;
 
 use anyhow::Context as _;
 use chrono::{Utc, Duration};
+use database::Account;
 use log::info;
 use serenity::builder::{CreateMessage, CreateInteractionResponseData, CreateEmbed};
 use serenity::http::CacheHttp;
@@ -39,12 +41,12 @@ use crate::commands::CommandResult;
 struct Handler {
     iex_api_key: String,
 	discord_guild_id: GuildId,
-    database: PgPool
+    database: PgPool//DatabaseConnection
 }
 
 struct BotService {
     serenity: serenity::Client,
-    database: PgPool
+    database: PgPool//DatabaseConnection
 }
 
 pub struct CORS;
@@ -93,6 +95,11 @@ impl shuttle_service::Service for BotService {
     }
 }
 
+use sea_orm::{
+    entity::prelude::*, ActiveValue, ConnectOptions, ConnectionTrait, Database, DatabaseConnection,
+    SqlxPostgresConnector, SqlxPostgresPoolConnection,
+};
+
 #[shuttle_service::main]
 async fn init( 
     #[shuttle_shared_db::Postgres] pool: PgPool,
@@ -116,14 +123,17 @@ async fn init(
         .await
         .map_err(CustomError::new)?;
 
-    let pool = pool.clone();
-    let pool1 = pool.clone();
-    let pool2 = pool.clone();
+    // let db = database::new(pool);
+    // let conn: &database::Connection = &db;
+
+    // let conn = SqlxPostgresConnector::from_sqlx_postgres_pool(pool);  // pg conn
+    // let conn1 = conn.clone();
+    // let conn2 = conn.clone();
 
     let handler = Handler {
         iex_api_key,
         discord_guild_id: GuildId(discord_guild_id.parse().unwrap()),
-        database: pool,
+        database: pool.to_owned()
     };
     // serenity client
     let intents = GatewayIntents::GUILD_MESSAGES | GatewayIntents::MESSAGE_CONTENT;
@@ -132,12 +142,12 @@ async fn init(
         .await
         .expect("Err creating client");
     
-    scheduler::start_scheduler(serenity.cache_and_http.http.clone(), pool1, discord_guild_id.parse().unwrap(), 698169764861837375);
+    scheduler::start_scheduler(serenity.cache_and_http.http.clone(), pool.to_owned(), discord_guild_id.parse().unwrap(), 698169764861837375);
 
     Ok(
         BotService{
             serenity,
-            database: pool2
+            database: pool.to_owned()
         }
     )
 }
@@ -171,7 +181,11 @@ impl EventHandler for Handler {
         let message_xp = 3;
         //let channel_id = msg.channel_id;
         if !msg.author.bot {
-            let level_up = db::increment_level(&self.database, msg.guild_id.unwrap().0 as i64, msg.author.id.to_string().parse::<i64>().unwrap(), msg.author.name, msg.timestamp.unix_timestamp(), message_xp).await;
+            let user_name = msg.author.name.to_owned();
+            db::add_user(&self.database, msg.author.id.to_string().parse::<i64>().unwrap(), user_name).await;
+            db::add_guild(&self.database, msg.guild_id.unwrap().to_string().parse::<i64>().unwrap(), _ctx.http.get_guild(msg.guild_id.unwrap().to_string().parse::<u64>().unwrap()).await.unwrap().name).await;
+            db::add_message(&self.database, msg.guild_id.unwrap().0 as i64, msg.channel_id.0 as i64, msg.author.id.to_string().parse::<i64>().unwrap(), msg.timestamp.unix_timestamp()).await;
+            let level_up = db::increment_level(&self.database, msg.guild_id.unwrap().0 as i64, msg.author.id.to_string().parse::<i64>().unwrap(), message_xp).await;
             if level_up.1 {
                 let mut lvl_up_msg = CreateMessage::default();
                 lvl_up_msg.embed(|embed| embed

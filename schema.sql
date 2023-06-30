@@ -1,41 +1,84 @@
---DROP TABLE IF EXISTS rank, watchlist, competitions, complist;
+--DROP TABLE IF EXISTS rank, watchlist, competition, complist, guild, account, task;
+
+CREATE TABLE IF NOT EXISTS guild (
+  id BIGINT PRIMARY KEY,
+  name VARCHAR
+);
+
+CREATE TABLE IF NOT EXISTS account (
+  id BIGINT PRIMARY KEY,
+  name VARCHAR
+);
 
 CREATE TABLE IF NOT EXISTS rank (
   id serial PRIMARY KEY,
-  guild_id BIGINT NOT NULL,
-  user_id BIGINT NOT NULL,
-  user_name TEXT NOT NULL,
-  last_msg BIGINT NULL,
-  points BIGINT NULL,
-  level BIGINT NULL,
-  UNIQUE (guild_id, user_id)
+  guild_id BIGINT,
+  user_id BIGINT,
+  xp BIGINT,
+  level BIGINT,
+  rank BIGINT,
+  UNIQUE (guild_id, user_id),
+  CONSTRAINT fk_guild_id FOREIGN KEY (guild_id) REFERENCES guild (id),
+  CONSTRAINT fk_user_id FOREIGN KEY (user_id) REFERENCES account (id)
 );
 
 CREATE TABLE IF NOT EXISTS watchlist (
   id serial PRIMARY KEY,
-  guild_id bigint NOT NULL,
-  user_id BIGINT NOT NULL,
-  list TEXT NOT NULL,
-  UNIQUE (guild_id, user_id)
+  guild_id BIGINT,
+  user_id BIGINT,
+  list VARCHAR,
+  UNIQUE (guild_id, user_id),
+  CONSTRAINT fk_guild_id FOREIGN KEY (guild_id) REFERENCES guild (id),
+  CONSTRAINT fk_user_id FOREIGN KEY (user_id) REFERENCES account (id)
+);
+
+CREATE TABLE IF NOT EXISTS competition (
+  id serial PRIMARY KEY,
+  name VARCHAR,
+  guild_id BIGINT,
+  active BOOLEAN,
+  reg_open BOOLEAN,
+  image VARCHAR,
+  color VARCHAR,
+  start_date BIGINT,
+  end_date BIGINT,
+  winner BIGINT,
+  UNIQUE (guild_id, id),
+  CONSTRAINT fk_guild_id FOREIGN KEY (guild_id) REFERENCES guild (id),
+  CONSTRAINT fk_winner FOREIGN KEY (winner) REFERENCES account (id)
 );
 
 CREATE TABLE IF NOT EXISTS complist (
   id serial PRIMARY KEY,
-  guild_id BIGINT NOT NULL,
-  user_id BIGINT NOT NULL,
-  list TEXT NOT NULL,
-  comp_id BIGINT NOT NULL,
-  UNIQUE (guild_id, user_id, comp_id)
+  guild_id BIGINT,
+  user_id BIGINT,
+  list VARCHAR,
+  comp_id BIGINT,
+  UNIQUE (guild_id, user_id, comp_id),
+  CONSTRAINT fk_guild_id FOREIGN KEY (guild_id) REFERENCES guild (id),
+  CONSTRAINT fk_user_id FOREIGN KEY (user_id) REFERENCES account (id),
+  CONSTRAINT fk_comp_id FOREIGN KEY (comp_id) REFERENCES competition (id)
 );
 
-CREATE TABLE IF NOT EXISTS competitions (
+CREATE TABLE IF NOT EXISTS task (
   id serial PRIMARY KEY,
-  guild_id BIGINT NOT NULL,
-  active BOOLEAN NOT NULL,
-  reg_open BOOLEAN NOT NULL,
-  start_date BIGINT NOT NULL,
-  end_date BIGINT NOT NULL,
-  name TEXT NOT NULL,
-  winner BIGINT NULL,
-  UNIQUE (guild_id, id)
+  guild_id BIGINT,
+  channel_id BIGINT,
+  type VARCHAR,
+  content VARCHAR,
+  start_date BIGINT ,
+  end_date BIGINT,
+  UNIQUE (guild_id, id),
+  CONSTRAINT fk_guild_id FOREIGN KEY (guild_id) REFERENCES guild (id)
+);
+
+CREATE TABLE IF NOT EXISTS message (
+  id serial PRIMARY KEY,
+  guild_id BIGINT,
+  channel_id BIGINT,
+  user_id BIGINT,
+  timestamp BIGINT,
+  UNIQUE (guild_id, id),
+  CONSTRAINT fk_guild_id FOREIGN KEY (guild_id) REFERENCES guild (id),
+  CONSTRAINT fk_user_id FOREIGN KEY (user_id) REFERENCES account (id)
 );
